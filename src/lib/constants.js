@@ -101,7 +101,7 @@ export const PAYMENT_INFO = {
 
 export const EVENT_INFO = {
   title:
-    '5th Vyasa Puja & 56th Holy Appearance Day Celebration',
+    '9th Sanga Mahotsav | 5th Vyasa Puja & 56th Holy Appearance Day Celebration',
   gurudeva:
     'of our Parama Ārādhyatama Gurudeva His Holiness Haladhara Swami Maharaja',
   shortName: 'Vyasa Puja 2026',

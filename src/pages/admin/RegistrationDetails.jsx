@@ -75,10 +75,11 @@ export default function RegistrationDetails() {
             <dl>
               <Row label="Name" value={reg.name} />
               <Row label="Age" value={reg.age} />
-              <Row label="Initiated Name" value={reg.initiatedName} />
+              {/* <Row label="Initiated Name" value={reg.initiatedName} /> */}
               <Row label="Category" value={humanize(reg.devoteeCategory)} />
               <Row label="Mobile" value={reg.mobileNumber} />
               <Row label="Coming From" value={reg.comingFrom} />
+              <Row label="Facilitator" value={reg.facilitatorName} />
               <Row label="Family Members" value={family} />
             </dl>
           </CardContent>

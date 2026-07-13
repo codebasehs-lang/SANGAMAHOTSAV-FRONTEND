@@ -3,7 +3,13 @@ import { Search, BedDouble } from 'lucide-react';
 
 import api, { getErrorMessage } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
-import { ACCOMMODATION_STATUS } from '@/lib/constants';
+import {
+  ACCOMMODATION_STATUS,
+  NON_ATTENDING_TYPE,
+  SHARED_ACCOMMODATION,
+  FAMILY_ACCOMMODATION,
+  ADDITIONAL_FAMILY_ACCOMMODATION,
+} from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -28,6 +34,24 @@ const EMPTY = {
   roomNumber: '',
   hotelMapLink: '',
 };
+
+const ROOM_TYPE_OPTIONS = [
+  ...SHARED_ACCOMMODATION,
+  ...FAMILY_ACCOMMODATION,
+  ...ADDITIONAL_FAMILY_ACCOMMODATION,
+  ...NON_ATTENDING_TYPE,
+];
+
+/** Returns the label of whichever accommodation preference the devotee selected. */
+function getRoomType(reg) {
+  const value =
+    reg.sharedAccommodation ||
+    reg.familyAccommodation ||
+    reg.additionalFamilyAccommodation ||
+    reg.nonAttendingType;
+  if (!value) return '-';
+  return ROOM_TYPE_OPTIONS.find((o) => o.value === value)?.label || value;
+}
 
 export default function Accommodation() {
   const [rows, setRows] = useState([]);
@@ -166,6 +190,7 @@ export default function Accommodation() {
                   <TableHead>Name</TableHead>
                   <TableHead>Mobile</TableHead>
                   <TableHead>Arrival</TableHead>
+                  <TableHead>Room Type</TableHead>
                   <TableHead>Hotel / Room</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Action</TableHead>
@@ -177,6 +202,7 @@ export default function Accommodation() {
                     <TableCell className="font-medium">{r.name}</TableCell>
                     <TableCell>{r.mobileNumber}</TableCell>
                     <TableCell>{formatDate(r.arrivalDate)}</TableCell>
+                    <TableCell>{getRoomType(r)}</TableCell>
                     <TableCell>
                       {r.assignment
                         ? `${r.assignment.hotelName} / ${r.assignment.roomNumber}`

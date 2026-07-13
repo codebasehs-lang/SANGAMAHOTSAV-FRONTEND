@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Trash2, CheckCircle2 } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, CircleAlert, X } from 'lucide-react';
 
 import api, { getErrorMessage } from '@/lib/api';
 import {
@@ -44,6 +44,7 @@ const schema = z.object({
     .optional(),
   mobileNumber: z.string().regex(/^[0-9]{10,15}$/, 'Enter a valid 10-15 digit number'),
   comingFrom: z.string().min(1, 'This field is required'),
+  facilitatorName: z.string().optional(),
   arrivalDate: z.string().optional(),
   arrivalTime: z.string().optional(),
   nonAttendingType: z.string().optional(),
@@ -55,7 +56,7 @@ const schema = z.object({
   needJourneyPrasad: z.boolean().optional(),
   preferredSubject: z.string().optional(),
   preferredSubjectOther: z.string().optional(),
-  services: z.array(z.string()).optional(),
+  services: z.array(z.string()).max(2, 'You can select up to 2 services only').optional(),
   ownFourWheeler: z.boolean().optional(),
   amountPaid: z.coerce.number().min(0).optional(),
   comments: z.string().optional(),
@@ -73,15 +74,40 @@ function Field({ label, error, required, children }) {
   );
 }
 
+function RadioGroup({ label, name, options, selectedValue, onSelect, error }) {
+  return (
+    <div className="space-y-1.5">
+      <Label>{label}</Label>
+      <div className="flex flex-col gap-2">
+        {options.map((opt) => (
+          <label key={opt.value} className="flex items-center gap-2 text-sm">
+            <input
+              type="radio"
+              name={name}
+              value={opt.value}
+              checked={selectedValue === opt.value}
+              onChange={() => onSelect(name, opt.value)}
+            />
+            {opt.label}
+          </label>
+        ))}
+      </div>
+      {error && <p className="text-xs text-destructive">{error.message}</p>}
+    </div>
+  );
+}
+
 export default function Registration() {
   const [submitted, setSubmitted] = useState(false);
   const [serverError, setServerError] = useState('');
+  const [showErrorToast, setShowErrorToast] = useState(false);
 
   const {
     register,
     control,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(schema),
@@ -91,6 +117,10 @@ export default function Registration() {
       services: [],
       needJourneyPrasad: false,
       ownFourWheeler: false,
+      arrivalDate: '2026-10-02',
+      arrivalTime: '08:00',
+      departureDate: '2026-10-07',
+      departureTime: '14:00',
     },
   });
 
@@ -100,9 +130,30 @@ export default function Registration() {
   });
 
   const preferredSubject = watch('preferredSubject');
+  const additionalFamilyAccommodation = watch('additionalFamilyAccommodation');
+  const selectedServices = watch('services') || [];
+  const nonAttendingType = watch('nonAttendingType');
+  const sharedAccommodation = watch('sharedAccommodation');
+  const familyAccommodation = watch('familyAccommodation');
+
+  const selectedAccommodation =
+    nonAttendingType || sharedAccommodation || familyAccommodation || '';
+
+  function selectAccommodation(fieldName, value) {
+    setValue('nonAttendingType', fieldName === 'nonAttendingType' ? value : '');
+    setValue(
+      'sharedAccommodation',
+      fieldName === 'sharedAccommodation' ? value : ''
+    );
+    setValue(
+      'familyAccommodation',
+      fieldName === 'familyAccommodation' ? value : ''
+    );
+  }
 
   async function onSubmit(values) {
     setServerError('');
+    setShowErrorToast(false);
     try {
       // Drop empty-string / undefined optional fields so backend
       // optional validators don't reject them.
@@ -128,6 +179,7 @@ export default function Registration() {
       } else {
         setServerError(getErrorMessage(err));
       }
+      setShowErrorToast(true);
     }
   }
 
@@ -153,6 +205,26 @@ export default function Registration() {
 
   return (
     <div className="container max-w-3xl py-10">
+      {showErrorToast && serverError && (
+        <div className="fixed right-4 top-20 z-50 w-[min(92vw,520px)] rounded-lg border border-destructive/40 bg-white p-3 shadow-xl">
+          <div className="flex items-start gap-2">
+            <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-destructive">Submission error</p>
+              <p className="mt-0.5 break-words text-sm text-destructive">{serverError}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowErrorToast(false)}
+              className="rounded p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+              aria-label="Close error popup"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="mb-6">
         <h1 className="text-3xl font-bold">Devotee Registration</h1>
         <p className="text-muted-foreground">
@@ -184,17 +256,17 @@ export default function Registration() {
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             <Field label="Name" required error={errors.name}>
-              <Input {...register('name')} placeholder="Full name" />
+              <Input {...register('name')} placeholder="If Initiated, Please mention the initiated Name" />
             </Field>
             <Field label="Age" required error={errors.age}>
               <Input type="number" {...register('age')} />
             </Field>
-            <Field
+            {/* <Field
               label="Initiated Name (if initiated)"
               error={errors.initiatedName}
             >
               <Input {...register('initiatedName')} />
-            </Field>
+            </Field> */}
             <Field label="Devotee Category" required error={errors.devoteeCategory}>
               <Select options={DEVOTEE_CATEGORY} {...register('devoteeCategory')} />
             </Field>
@@ -203,6 +275,9 @@ export default function Registration() {
             </Field>
             <Field label="Coming From (Place)" required error={errors.comingFrom}>
               <Input {...register('comingFrom')} />
+            </Field>
+            <Field label="Facilitator Name" error={errors.facilitatorName}>
+              <Input {...register('facilitatorName')} placeholder="Name of the facilitator (optional)" />
             </Field>
           </CardContent>
         </Card>
@@ -277,48 +352,66 @@ export default function Registration() {
         <Card>
           <CardHeader>
             <CardTitle>Accommodation Preferences</CardTitle>
+            <CardDescription>
+              Please select only one option from the 7 accommodation choices.
+            </CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-2">
-            <Field
+          <CardContent className="space-y-6">
+            <RadioGroup
               label="Without Accommodation / Non Attending"
+              name="nonAttendingType"
+              options={NON_ATTENDING_TYPE}
+              selectedValue={selectedAccommodation}
+              onSelect={selectAccommodation}
               error={errors.nonAttendingType}
-            >
-              <Select
-                options={NON_ATTENDING_TYPE}
-                placeholder="Select (optional)"
-                {...register('nonAttendingType')}
-              />
-            </Field>
-            <Field
+            />
+            <RadioGroup
               label="Shared Accommodation (Common utility + Prasadam)"
+              name="sharedAccommodation"
+              options={SHARED_ACCOMMODATION}
+              selectedValue={selectedAccommodation}
+              onSelect={selectAccommodation}
               error={errors.sharedAccommodation}
-            >
-              <Select
-                options={SHARED_ACCOMMODATION}
-                placeholder="Select (optional)"
-                {...register('sharedAccommodation')}
-              />
-            </Field>
-            <Field
+            />
+            <RadioGroup
               label="Family Accommodation (Common utility + Prasadam)"
+              name="familyAccommodation"
+              options={FAMILY_ACCOMMODATION}
+              selectedValue={selectedAccommodation}
+              onSelect={selectAccommodation}
               error={errors.familyAccommodation}
-            >
-              <Select
-                options={FAMILY_ACCOMMODATION}
-                placeholder="Select (optional)"
-                {...register('familyAccommodation')}
-              />
-            </Field>
-            <Field
-              label="Additional Family Accommodation (charges only, for one additional devotee)"
-              error={errors.additionalFamilyAccommodation}
-            >
-              <Select
-                options={ADDITIONAL_FAMILY_ACCOMMODATION}
-                placeholder="Select (optional)"
-                {...register('additionalFamilyAccommodation')}
-              />
-            </Field>
+            />
+            <div className="space-y-1.5">
+              <Label>
+                Additional Family Accommodation (charges only, for one
+                additional devotee)
+              </Label>
+              <div className="flex flex-col gap-2">
+                {ADDITIONAL_FAMILY_ACCOMMODATION.map((opt) => (
+                  <label
+                    key={opt.value}
+                    className="flex items-center gap-2 text-sm"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={additionalFamilyAccommodation === opt.value}
+                      onChange={(e) =>
+                        setValue(
+                          'additionalFamilyAccommodation',
+                          e.target.checked ? opt.value : ''
+                        )
+                      }
+                    />
+                    {opt.label}
+                  </label>
+                ))}
+              </div>
+              {errors.additionalFamilyAccommodation && (
+                <p className="text-xs text-destructive">
+                  {errors.additionalFamilyAccommodation.message}
+                </p>
+              )}
+            </div>
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" {...register('needJourneyPrasad')} />
               Need Journey Prasad
@@ -353,19 +446,29 @@ export default function Registration() {
             )}
 
             <div>
-              <Label>Service you want to engage in</Label>
+              <Label>Service you want to engage in (Select up to 2 only)</Label>
+              <p className="mt-1 text-xs text-muted-foreground">
+                You can choose a maximum of 2 services.
+              </p>
               <div className="mt-2 grid gap-2 sm:grid-cols-2 md:grid-cols-3">
                 {SERVICES.map((s) => (
                   <label key={s.value} className="flex items-center gap-2 text-sm">
                     <input
                       type="checkbox"
                       value={s.value}
+                      disabled={
+                        selectedServices.length >= 2 &&
+                        !selectedServices.includes(s.value)
+                      }
                       {...register('services')}
                     />
                     {s.label}
                   </label>
                 ))}
               </div>
+              {errors.services && (
+                <p className="mt-1 text-xs text-destructive">{errors.services.message}</p>
+              )}
             </div>
           </CardContent>
         </Card>
