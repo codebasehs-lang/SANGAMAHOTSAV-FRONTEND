@@ -14,10 +14,12 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { FullPageSpinner } from '@/components/Spinner';
+import { useAuth } from '@/context/AuthContext';
 
 const EMPTY = { hallName: '', hallAddress: '', hallMapLink: '' };
 
 export default function SeminarHall() {
+  const { isViewer } = useAuth();
   const [halls, setHalls] = useState([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -71,9 +73,11 @@ export default function SeminarHall() {
             Only one hall can be active at a time.
           </p>
         </div>
-        <Button onClick={() => setOpen(true)}>
-          <Plus className="h-4 w-4" /> Add Hall
-        </Button>
+        {!isViewer && (
+          <Button onClick={() => setOpen(true)}>
+            <Plus className="h-4 w-4" /> Add Hall
+          </Button>
+        )}
       </div>
 
       {error && <p className="text-sm text-destructive">{error}</p>}
@@ -87,11 +91,11 @@ export default function SeminarHall() {
                 <Badge variant="success">
                   <CheckCircle2 className="mr-1 h-3 w-3" /> Active
                 </Badge>
-              ) : (
+              ) : !isViewer ? (
                 <Button size="sm" variant="outline" onClick={() => activate(h.id)}>
                   Activate
                 </Button>
-              )}
+              ) : null}
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
               <p className="text-muted-foreground">{h.hallAddress}</p>

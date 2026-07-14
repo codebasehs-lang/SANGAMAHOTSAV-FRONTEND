@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 export default function SplashScreen({ onClose }) {
   const [photoLoadFailed, setPhotoLoadFailed] = useState(false);
@@ -9,21 +9,12 @@ export default function SplashScreen({ onClose }) {
       <div className="pointer-events-none absolute -left-24 top-[-120px] h-80 w-80 rounded-full bg-amber-300/35 blur-3xl" />
       <div className="pointer-events-none absolute -right-20 bottom-[-80px] h-72 w-72 rounded-full bg-orange-300/30 blur-3xl" />
 
-      <button
-        type="button"
-        onClick={onClose}
-        className="absolute right-4 top-4 inline-flex items-center gap-1 rounded-full border border-amber-900/20 bg-white/80 px-3 py-1.5 text-xs font-medium text-amber-900 transition hover:bg-white"
-      >
-        <X className="h-3.5 w-3.5" />
-        Skip
-      </button>
-
       <div className="relative mx-auto w-full max-w-3xl rounded-3xl border border-amber-900/15 bg-white/80 p-5 text-slate-900 shadow-2xl backdrop-blur-md md:p-8">
         <div className="grid items-center gap-6 md:grid-cols-[220px_1fr] md:gap-8">
           <div className="mx-auto w-full max-w-[220px]">
             {!photoLoadFailed ? (
               <img
-                src="/images/gurudeva-photo.jpg"
+                src="/images/Gurudeva.png"
                 alt="Gurudeva"
                 onError={() => setPhotoLoadFailed(true)}
                 className="h-[280px] w-full rounded-2xl object-cover ring-2 ring-amber-400/60"
@@ -56,6 +47,14 @@ export default function SplashScreen({ onClose }) {
               A sacred gathering of devotion, learning, and seva.
             </p>
             <div className="mt-6 h-1.5 w-40 rounded-full bg-gradient-to-r from-amber-300 via-orange-300 to-rose-300 md:mx-0 mx-auto" />
+            <button
+              type="button"
+              onClick={onClose}
+              className="mt-6 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-2.5 text-sm font-semibold text-white shadow-md transition hover:from-amber-600 hover:to-orange-600 hover:shadow-lg active:scale-95"
+            >
+              Continue
+              <ArrowRight className="h-4 w-4" />
+            </button>
           </div>
         </div>
       </div>

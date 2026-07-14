@@ -24,7 +24,7 @@ const NAV = [
 ];
 
 export default function AdminLayout() {
-  const { admin, logout } = useAuth();
+  const { admin, logout, isViewer } = useAuth();
   const navigate = useNavigate();
 
   function handleLogout() {
@@ -37,7 +37,7 @@ export default function AdminLayout() {
       {/* Sidebar */}
       <aside className="hidden w-64 flex-col border-r bg-white md:flex">
         <div className="flex h-16 items-center border-b px-6">
-          <span className="text-lg font-bold text-primary">Sangamahotsav</span>
+          <span className="text-lg font-bold text-primary">Sanga Mahotsav</span>
         </div>
         <nav className="flex-1 space-y-1 p-3">
           {NAV.map(({ to, label, icon: Icon, end }) => (
@@ -65,12 +65,21 @@ export default function AdminLayout() {
       <div className="flex flex-1 flex-col">
         <header className="flex h-16 items-center justify-between border-b bg-white px-6">
           <div className="md:hidden">
-            <span className="font-bold text-primary">Sangamahotsav</span>
+            <span className="font-bold text-primary">Sanga Mahotsav</span>
           </div>
           <div className="ml-auto flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">
-              {admin?.name || admin?.email}
-            </span>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>{admin?.name || admin?.email}</span>
+              {isViewer ? (
+                <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-semibold text-yellow-700">
+                  View Only
+                </span>
+              ) : (
+                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+                  Super Admin
+                </span>
+              )}
+            </div>
             <Button variant="outline" size="sm" onClick={handleLogout}>
               <LogOut className="h-4 w-4" /> Logout
             </Button>

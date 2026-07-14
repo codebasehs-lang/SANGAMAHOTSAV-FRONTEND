@@ -3,6 +3,7 @@ import { Search, BedDouble } from 'lucide-react';
 
 import api, { getErrorMessage } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
 import {
   ACCOMMODATION_STATUS,
   NON_ATTENDING_TYPE,
@@ -33,6 +34,10 @@ const EMPTY = {
   hotelAddress: '',
   roomNumber: '',
   hotelMapLink: '',
+  additionalHotelName: '',
+  additionalHotelAddress: '',
+  additionalRoomNumber: '',
+  additionalHotelMapLink: '',
 };
 
 const ROOM_TYPE_OPTIONS = [
@@ -42,18 +47,18 @@ const ROOM_TYPE_OPTIONS = [
   ...NON_ATTENDING_TYPE,
 ];
 
-/** Returns the label of whichever accommodation preference the devotee selected. */
+/** Returns the label of whichever PRIMARY accommodation preference the devotee selected (excluding additional). */
 function getRoomType(reg) {
   const value =
     reg.sharedAccommodation ||
     reg.familyAccommodation ||
-    reg.additionalFamilyAccommodation ||
     reg.nonAttendingType;
   if (!value) return '-';
   return ROOM_TYPE_OPTIONS.find((o) => o.value === value)?.label || value;
 }
 
 export default function Accommodation() {
+  const { isViewer } = useAuth();
   const [rows, setRows] = useState([]);
   const [meta, setMeta] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -65,6 +70,7 @@ export default function Accommodation() {
   const [form, setForm] = useState(EMPTY);
   const [hotels, setHotels] = useState([]);
   const [selectedHotel, setSelectedHotel] = useState('');
+  const [selectedAdditionalHotel, setSelectedAdditionalHotel] = useState('');
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
 
@@ -99,6 +105,7 @@ export default function Accommodation() {
   function openAssign(reg) {
     setActive(reg);
     setSelectedHotel('');
+    setSelectedAdditionalHotel('');
     setForm(
       reg.assignment
         ? {
@@ -106,6 +113,10 @@ export default function Accommodation() {
             hotelAddress: reg.assignment.hotelAddress || '',
             roomNumber: reg.assignment.roomNumber || '',
             hotelMapLink: reg.assignment.hotelMapLink || '',
+            additionalHotelName: reg.assignment.additionalHotelName || '',
+            additionalHotelAddress: reg.assignment.additionalHotelAddress || '',
+            additionalRoomNumber: reg.assignment.additionalRoomNumber || '',
+            additionalHotelMapLink: reg.assignment.additionalHotelMapLink || '',
           }
         : EMPTY
     );
@@ -121,6 +132,19 @@ export default function Accommodation() {
         hotelName: hotel.hotelName || '',
         hotelAddress: hotel.hotelAddress || '',
         hotelMapLink: hotel.hotelMapLink || '',
+      }));
+    }
+  }
+
+  function pickAdditionalHotel(hotelId) {
+    setSelectedAdditionalHotel(hotelId);
+    const hotel = hotels.find((h) => String(h.id) === String(hotelId));
+    if (hotel) {
+      setForm((prev) => ({
+        ...prev,
+        additionalHotelName: hotel.hotelName || '',
+        additionalHotelAddress: hotel.hotelAddress || '',
+        additionalHotelMapLink: hotel.hotelMapLink || '',
       }));
     }
   }
@@ -204,18 +228,36 @@ export default function Accommodation() {
                     <TableCell>{formatDate(r.arrivalDate)}</TableCell>
                     <TableCell>{getRoomType(r)}</TableCell>
                     <TableCell>
-                      {r.assignment
-                        ? `${r.assignment.hotelName} / ${r.assignment.roomNumber}`
-                        : '-'}
+                      {r.assignment ? (
+                        <div className="space-y-0.5 text-sm">
+                          <div>{r.assignment.hotelName} / {r.assignment.roomNumber}</div>
+                          {r.assignment.additionalRoomNumber && (
+                            <div className="text-xs text-muted-foreground">
+                              Addl: {r.assignment.additionalHotelName} / {r.assignment.additionalRoomNumber}
+                            </div>
+                          )}
+                        </div>
+                      ) : '-'}
                     </TableCell>
                     <TableCell>
                       <StatusBadge status={r.accommodationStatus} />
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button size="sm" onClick={() => openAssign(r)}>
-                        <BedDouble className="h-4 w-4" />
-                        {r.assignment ? 'Edit' : 'Assign'}
-                      </Button>
+                      {isViewer ? (
+                        <span className="text-xs text-muted-foreground">View Only</span>
+                      ) : r.paymentStatus !== 'APPROVED' ? (
+                        <span
+                          title="Payment must be approved before assigning accommodation"
+                          className="inline-block cursor-not-allowed rounded-md border border-gray-200 bg-gray-100 px-3 py-1.5 text-xs text-gray-400"
+                        >
+                          Payment Pending
+                        </span>
+                      ) : (
+                        <Button size="sm" onClick={() => openAssign(r)}>
+                          <BedDouble className="h-4 w-4" />
+                          {r.assignment ? 'Edit' : 'Assign'}
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -237,6 +279,10 @@ export default function Accommodation() {
           </div>
         )}
         <div className="space-y-3">
+          {/* ── Primary Room ── */}
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Primary Room
+          </p>
           {hotels.length > 0 && (
             <div className="space-y-1.5">
               <Label>Select Hotel</Label>
@@ -262,9 +308,7 @@ export default function Accommodation() {
             <Label>Hotel Address</Label>
             <Input
               value={form.hotelAddress}
-              onChange={(e) =>
-                setForm({ ...form, hotelAddress: e.target.value })
-              }
+              onChange={(e) => setForm({ ...form, hotelAddress: e.target.value })}
             />
           </div>
           <div className="space-y-1.5">
@@ -278,12 +322,70 @@ export default function Accommodation() {
             <Label>Hotel Google Map Link</Label>
             <Input
               value={form.hotelMapLink}
-              onChange={(e) =>
-                setForm({ ...form, hotelMapLink: e.target.value })
-              }
+              onChange={(e) => setForm({ ...form, hotelMapLink: e.target.value })}
               placeholder="https://maps.google.com/..."
             />
           </div>
+
+          {/* ── Additional Family Room (only when devotee selected it) ── */}
+          {active?.additionalFamilyAccommodation && (
+            <>
+              <div className="mt-2 border-t pt-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Additional Family Room
+                </p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {ADDITIONAL_FAMILY_ACCOMMODATION.find(
+                    (o) => o.value === active.additionalFamilyAccommodation
+                  )?.label || active.additionalFamilyAccommodation}
+                </p>
+              </div>
+              {hotels.length > 0 && (
+                <div className="space-y-1.5">
+                  <Label>Select Hotel</Label>
+                  <Select
+                    options={hotels.map((h) => ({
+                      value: String(h.id),
+                      label: h.hotelName,
+                    }))}
+                    placeholder="Choose a hotel..."
+                    value={selectedAdditionalHotel}
+                    onChange={(e) => pickAdditionalHotel(e.target.value)}
+                  />
+                </div>
+              )}
+              <div className="space-y-1.5">
+                <Label>Hotel Name</Label>
+                <Input
+                  value={form.additionalHotelName}
+                  onChange={(e) => setForm({ ...form, additionalHotelName: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Hotel Address</Label>
+                <Input
+                  value={form.additionalHotelAddress}
+                  onChange={(e) => setForm({ ...form, additionalHotelAddress: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Room Number</Label>
+                <Input
+                  value={form.additionalRoomNumber}
+                  onChange={(e) => setForm({ ...form, additionalRoomNumber: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Hotel Google Map Link</Label>
+                <Input
+                  value={form.additionalHotelMapLink}
+                  onChange={(e) => setForm({ ...form, additionalHotelMapLink: e.target.value })}
+                  placeholder="https://maps.google.com/..."
+                />
+              </div>
+            </>
+          )}
+
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => setActive(null)}>
               Cancel

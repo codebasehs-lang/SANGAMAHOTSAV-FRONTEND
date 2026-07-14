@@ -20,7 +20,7 @@ export default function Home() {
 
         <div className="container relative flex flex-col items-center py-20 text-center">
           <h1 className="max-w-3xl text-4xl font-bold tracking-tight md:text-5xl">
-            Hare Krishna! Welcome to Sangamahotsav
+            Hare Krishna! Welcome to Sanga Mahotsav
           </h1>
 
           <div className="mt-6 max-w-2xl rounded-xl border bg-white/80 p-5 shadow-sm backdrop-blur">

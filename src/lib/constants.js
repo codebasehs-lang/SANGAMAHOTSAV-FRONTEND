@@ -89,6 +89,11 @@ export const ACCOMMODATION_STATUS = [
   { value: 'NOT_REQUIRED', label: 'Not Required' },
 ];
 
+export const PAYMENT_STATUS = [
+  { value: 'PENDING', label: 'Pending' },
+  { value: 'APPROVED', label: 'Approved' },
+];
+
 export const SMS_CAMPAIGN_TYPE = [
   { value: 'ACCOMMODATION', label: 'Accommodation Assignment' },
   { value: 'CUSTOM', label: 'Custom Message' },

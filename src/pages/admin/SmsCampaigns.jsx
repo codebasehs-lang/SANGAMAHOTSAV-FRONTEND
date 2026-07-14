@@ -4,6 +4,7 @@ import { Send, MessageSquare, Search, X } from 'lucide-react';
 import api, { getErrorMessage } from '@/lib/api';
 import { formatDate, humanize } from '@/lib/utils';
 import { SMS_CAMPAIGN_TYPE } from '@/lib/constants';
+import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -29,6 +30,7 @@ import StatusBadge from '@/components/StatusBadge';
 import { Spinner } from '@/components/Spinner';
 
 export default function SmsCampaigns() {
+  const { isViewer } = useAuth();
   const [type, setType] = useState('ACCOMMODATION');
   const [message, setMessage] = useState('');
   const [audience, setAudience] = useState('ALL'); // 'ALL' | 'SELECTED'
@@ -128,14 +130,15 @@ export default function SmsCampaigns() {
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">SMS Campaigns</h1>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Send Bulk SMS</CardTitle>
-          <CardDescription>
-            Send to all eligible devotees, or search and pick specific
-            recipients. Accommodation SMS is sent only to devotees with an
-            assigned room.
-          </CardDescription>
+      {!isViewer ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Send Bulk SMS</CardTitle>
+            <CardDescription>
+              Send to all eligible devotees, or search and pick specific
+              recipients. Accommodation SMS is sent only to devotees with an
+              assigned room.
+            </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap gap-4">
@@ -252,6 +255,11 @@ export default function SmsCampaigns() {
           </div>
         </CardContent>
       </Card>
+      ) : (
+        <div className="rounded-md border bg-yellow-50 p-4 text-sm text-yellow-700">
+          You have view-only access. Sending SMS campaigns is restricted to Admins.
+        </div>
+      )}
 
       {error && (
         <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">

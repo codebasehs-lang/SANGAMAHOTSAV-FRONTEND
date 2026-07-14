@@ -49,7 +49,7 @@ export default function Login() {
     <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl text-primary">Sangamahotsav</CardTitle>
+          <CardTitle className="text-2xl text-primary">Sanga Mahotsav</CardTitle>
           <CardDescription>Admin Login</CardDescription>
         </CardHeader>
         <CardContent>

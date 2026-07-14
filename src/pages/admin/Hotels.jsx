@@ -13,10 +13,12 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { FullPageSpinner } from '@/components/Spinner';
+import { useAuth } from '@/context/AuthContext';
 
 const EMPTY = { hotelName: '', hotelAddress: '', hotelMapLink: '' };
 
 export default function Hotels() {
+  const { isViewer } = useAuth();
   const [hotels, setHotels] = useState([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -99,9 +101,11 @@ export default function Hotels() {
             Manage hotels to reuse when assigning accommodation.
           </p>
         </div>
-        <Button onClick={openCreate}>
-          <Plus className="h-4 w-4" /> Add Hotel
-        </Button>
+        {!isViewer && (
+          <Button onClick={openCreate}>
+            <Plus className="h-4 w-4" /> Add Hotel
+          </Button>
+        )}
       </div>
 
       {error && <p className="text-sm text-destructive">{error}</p>}
@@ -112,12 +116,16 @@ export default function Hotels() {
             <CardHeader className="flex-row items-start justify-between space-y-0">
               <CardTitle className="text-base">{h.hotelName}</CardTitle>
               <div className="flex gap-1">
-                <Button size="sm" variant="outline" onClick={() => openEdit(h)}>
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => remove(h.id)}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                {!isViewer && (
+                  <>
+                    <Button size="sm" variant="outline" onClick={() => openEdit(h)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => remove(h.id)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </>
+                )}
               </div>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">

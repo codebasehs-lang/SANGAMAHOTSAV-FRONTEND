@@ -59,6 +59,9 @@ const schema = z.object({
   services: z.array(z.string()).max(2, 'You can select up to 2 services only').optional(),
   ownFourWheeler: z.boolean().optional(),
   amountPaid: z.coerce.number().min(0).optional(),
+  paymentReferenceId: z.string().max(100).optional(),
+  payeeAccountName: z.string().max(150).optional(),
+  paymentScreenshot: z.instanceof(File).optional(),
   comments: z.string().optional(),
 });
 
@@ -101,6 +104,7 @@ export default function Registration() {
   const [submitted, setSubmitted] = useState(false);
   const [serverError, setServerError] = useState('');
   const [showErrorToast, setShowErrorToast] = useState(false);
+  const [screenshotPreview, setScreenshotPreview] = useState(null);
 
   const {
     register,
@@ -155,19 +159,30 @@ export default function Registration() {
     setServerError('');
     setShowErrorToast(false);
     try {
-      // Drop empty-string / undefined optional fields so backend
-      // optional validators don't reject them.
-      const cleaned = Object.fromEntries(
-        Object.entries(values).filter(
-          ([, v]) => v !== '' && v !== undefined && v !== null
-        )
-      );
-      const payload = {
-        ...cleaned,
-        familyMembers: (values.familyMembers || []).filter((m) => m.name),
-        services: values.services || [],
-      };
-      await api.post('/registrations', payload);
+      const formData = new FormData();
+
+      // Append all scalar fields, skipping empty/undefined
+      const skip = new Set(['familyMembers', 'services', 'paymentScreenshot']);
+      for (const [key, val] of Object.entries(values)) {
+        if (skip.has(key)) continue;
+        if (val === '' || val === undefined || val === null) continue;
+        formData.append(key, val);
+      }
+
+      // Array fields
+      const members = (values.familyMembers || []).filter((m) => m.name);
+      formData.append('familyMembers', JSON.stringify(members));
+      const services = values.services || [];
+      formData.append('services', JSON.stringify(services));
+
+      // File
+      if (values.paymentScreenshot instanceof File) {
+        formData.append('paymentScreenshot', values.paymentScreenshot);
+      }
+
+      await api.post('/registrations', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
       setSubmitted(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
@@ -228,7 +243,7 @@ export default function Registration() {
       <div className="mb-6">
         <h1 className="text-3xl font-bold">Devotee Registration</h1>
         <p className="text-muted-foreground">
-          Please fill in your details for Sangamahotsav.
+          Please fill in your details for Sanga Mahotsav.
         </p>
       </div>
 
@@ -365,14 +380,27 @@ export default function Registration() {
               onSelect={selectAccommodation}
               error={errors.nonAttendingType}
             />
-            <RadioGroup
-              label="Shared Accommodation (Common utility + Prasadam)"
-              name="sharedAccommodation"
-              options={SHARED_ACCOMMODATION}
-              selectedValue={selectedAccommodation}
-              onSelect={selectAccommodation}
-              error={errors.sharedAccommodation}
-            />
+            <div className="space-y-2">
+              <RadioGroup
+                label="Shared Accommodation (Common utility + Prasadam)"
+                name="sharedAccommodation"
+                options={SHARED_ACCOMMODATION}
+                selectedValue={selectedAccommodation}
+                onSelect={selectAccommodation}
+                error={errors.sharedAccommodation}
+              />
+              {/* Dormitory note — always visible under shared options */}
+              <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
+                <p className="text-sm font-semibold text-amber-800">
+                  📢 Important Note — Dormitory (Prabhuji &amp; Mataji)
+                </p>
+                <p className="mt-1 text-sm text-amber-700">
+                  Dormitory accommodation is <span className="font-semibold">gender-separated</span> (separate halls for Prabhuji &amp; Mataji).
+                  Husband and wife <span className="font-semibold">must register individually</span> — each submitting their own separate registration form and selecting Dormitory.
+                  Please do <span className="font-semibold">not</span> add your spouse as a family member if both of you are choosing Dormitory.
+                </p>
+              </div>
+            </div>
             <RadioGroup
               label="Family Accommodation (Common utility + Prasadam)"
               name="familyAccommodation"
@@ -494,6 +522,39 @@ export default function Registration() {
             </div>
             <Field label="Amount Paid" error={errors.amountPaid}>
               <Input type="number" step="0.01" {...register('amountPaid')} />
+            </Field>
+            <Field label="Payment Reference ID" error={errors.paymentReferenceId}>
+              <Input
+                {...register('paymentReferenceId')}
+                placeholder="Transaction / UTR reference number"
+              />
+            </Field>
+            <Field
+              label="Payee Account Name (Name as per bank account)"
+              error={errors.payeeAccountName}
+            >
+              <Input
+                {...register('payeeAccountName')}
+                placeholder="Name as it appears in your bank account"
+              />
+            </Field>
+            <Field label="Payment Screenshot" error={errors.paymentScreenshot}>
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] ?? null;
+                  setValue('paymentScreenshot', file || undefined);
+                  setScreenshotPreview(file ? URL.createObjectURL(file) : null);
+                }}
+              />
+              {screenshotPreview && (
+                <img
+                  src={screenshotPreview}
+                  alt="Payment screenshot preview"
+                  className="mt-2 max-h-48 rounded-md border object-contain"
+                />
+              )}
             </Field>
             <Field label="Comments / Suggestions" error={errors.comments}>
               <Textarea rows={3} {...register('comments')} />
