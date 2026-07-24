@@ -21,7 +21,7 @@ import { EVENT_INFO, PAYMENT_INFO } from "@/lib/constants";
 
 const DONATION_ITEMS = [
   {
-    service: "Lakshmi – Deity Garlands & Flowers",
+    service: "Deity Garlands & Flowers",
     amount: "₹20,000 for Seminar",
     note: "(per day ₹4,000 / Altar & Outfit)",
     icon: Sparkles,
