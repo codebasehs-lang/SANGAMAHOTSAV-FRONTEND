@@ -356,7 +356,7 @@ export default function Home() {
 
         <div className="donation-cta">
           <p>
-            Please contact the seva team directly for contribution support using the number below.
+            Please contact the seva team directly for contribution support using the number below. PHONE: +91 7032241089
           </p>
           <button
             type="button"
