@@ -165,17 +165,33 @@ export default function Registration() {
       PREMIUM_AC: 19500,
     };
 
+    const ADDITIONAL_MAP = {
+      DELUXE_AC: 'DELUXE',
+      PREMIUM_AC: 'PREMIUM',
+    };
+
     let total = 0;
 
     if (nonAttendingType) {
       total = PRICES[nonAttendingType] ?? 0;
+      setValue('additionalFamilyAccommodation', undefined, { shouldDirty: true });
     } else if (sharedAccommodation) {
       total = PRICES[sharedAccommodation] ?? 0;
+      setValue('additionalFamilyAccommodation', undefined, { shouldDirty: true });
     } else if (familyAccommodation) {
       total = PRICES[familyAccommodation] ?? 0;
       if (extraFamilyDevotee) {
         total += 1000;
+        setValue(
+          'additionalFamilyAccommodation',
+          ADDITIONAL_MAP[familyAccommodation],
+          { shouldDirty: true }
+        );
+      } else {
+        setValue('additionalFamilyAccommodation', undefined, { shouldDirty: true });
       }
+    } else {
+      setValue('additionalFamilyAccommodation', undefined, { shouldDirty: true });
     }
 
     if (total > 0) {
