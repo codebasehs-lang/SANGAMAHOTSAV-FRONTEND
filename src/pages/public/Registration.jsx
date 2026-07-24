@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -16,6 +16,10 @@ import {
   PAYMENT_INFO,
   EVENT_INFO,
 } from '@/lib/constants';
+
+const DORMITORY_OPTION = SHARED_ACCOMMODATION.find((opt) => opt.value === 'DORMITORY');
+const SHARED_ACCOMMODATION_PER_DEVOTEE = SHARED_ACCOMMODATION.filter((opt) => opt.value !== 'DORMITORY');
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -59,10 +63,14 @@ const schema = z.object({
   preferredSubjectOther: z.string().optional(),
   services: z.array(z.string()).max(2, 'You can select up to 2 services only').optional(),
   ownFourWheeler: z.boolean().optional(),
-  amountPaid: z.coerce.number().min(0).optional(),
-  paymentReferenceId: z.string().max(100).optional(),
-  payeeAccountName: z.string().max(150).optional(),
-  paymentScreenshot: z.instanceof(File).optional(),
+  extraFamilyDevotee: z.boolean().optional(),
+  amountPaid: z.coerce.number({
+    required_error: 'Amount paid is required',
+    invalid_type_error: 'Amount paid is required',
+  }).min(0, 'Amount paid must be at least 0'),
+  paymentReferenceId: z.string().min(1, 'Payment reference is required').max(100),
+  payeeAccountName: z.string().min(1, 'Payee account name is required').max(150),
+  paymentScreenshot: z.instanceof(File, 'Payment screenshot is required'),
   comments: z.string().optional(),
 });
 
@@ -141,9 +149,41 @@ export default function Registration() {
   const nonAttendingType = watch('nonAttendingType');
   const sharedAccommodation = watch('sharedAccommodation');
   const familyAccommodation = watch('familyAccommodation');
+  const extraFamilyDevotee = watch('extraFamilyDevotee');
 
   const selectedAccommodation =
     nonAttendingType || sharedAccommodation || familyAccommodation || '';
+
+  useEffect(() => {
+    const PRICES = {
+      NON_ATTENDING_DISCIPLE: 2000,
+      ATTENDING_NOT_STAYING: 3500,
+      DORMITORY: 5000,
+      NON_AC_SHARING: 5500,
+      AC_SHARING: 7000,
+      DELUXE_AC: 18000,
+      PREMIUM_AC: 19500,
+    };
+
+    let total = 0;
+
+    if (nonAttendingType) {
+      total = PRICES[nonAttendingType] ?? 0;
+    } else if (sharedAccommodation) {
+      total = PRICES[sharedAccommodation] ?? 0;
+    } else if (familyAccommodation) {
+      total = PRICES[familyAccommodation] ?? 0;
+      if (extraFamilyDevotee) {
+        total += 1000;
+      }
+    }
+
+    if (total > 0) {
+      setValue('amountPaid', total, { shouldDirty: true, shouldValidate: true });
+    } else {
+      setValue('amountPaid', undefined, { shouldDirty: true, shouldValidate: true });
+    }
+  }, [nonAttendingType, sharedAccommodation, familyAccommodation, extraFamilyDevotee, setValue]);
 
   function selectAccommodation(fieldName, value) {
     setValue('nonAttendingType', fieldName === 'nonAttendingType' ? value : '');
@@ -221,7 +261,7 @@ export default function Registration() {
   }
 
   return (
-    <div className="container max-w-3xl py-10">
+    <div className="container max-w-5xl py-10">
       {showErrorToast && serverError && (
         <div className="fixed right-4 top-20 z-50 w-[min(92vw,520px)] rounded-lg border border-destructive/40 bg-white p-3 shadow-xl">
           <div className="flex items-start gap-2">
@@ -249,10 +289,18 @@ export default function Registration() {
         </p>
       </div>
 
-      <div className="mb-6 rounded-xl border bg-primary/5 p-4 text-center">
-        <p className="font-semibold text-primary">{EVENT_INFO.title}</p>
+      <div className="relative mb-6 rounded-xl border bg-primary/5 p-4 text-center registration-card-with-corners">
+        <div className="hero-top-corner hero-top-corner-left">
+          <img src="/images/srilagurudev.png" alt="Sri Lal Gurudev" />
+        </div>
+        <div className="hero-top-corner hero-top-corner-right">
+          <img src="/images/prabhupad.png" alt="Prabhupad" />
+        </div>
+        <p className="font-bold text-xl leading-tight text-primary">
+          {EVENT_INFO.title}
+        </p>
         <p className="text-sm text-muted-foreground">{EVENT_INFO.gurudeva}</p>
-        <p className="mt-2 text-sm">
+        <p className="mt-2 text-sm font-semibold text-amber-900">
           {EVENT_INFO.startDate} ({EVENT_INFO.startTime}) &ndash;{' '}
           {EVENT_INFO.endDate} ({EVENT_INFO.endTime})
         </p>
@@ -365,98 +413,10 @@ export default function Registration() {
           </CardContent>
         </Card>
 
-        {/* Accommodation */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Accommodation Preferences</CardTitle>
-            <CardDescription>
-              Please select only one option from the 7 accommodation choices.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <RadioGroup
-              label="Without Accommodation / Non Attending"
-              name="nonAttendingType"
-              options={NON_ATTENDING_TYPE}
-              selectedValue={selectedAccommodation}
-              onSelect={selectAccommodation}
-              error={errors.nonAttendingType}
-            />
-            <div className="space-y-2">
-              <RadioGroup
-                label="Shared Accommodation (Common utility + Prasadam)"
-                name="sharedAccommodation"
-                options={SHARED_ACCOMMODATION}
-                selectedValue={selectedAccommodation}
-                onSelect={selectAccommodation}
-                error={errors.sharedAccommodation}
-              />
-              {/* Dormitory note — always visible under shared options */}
-              <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
-                <p className="text-sm font-semibold text-amber-800">
-                  📢 Important Note — Dormitory (Prabhuji &amp; Mataji)
-                </p>
-                <p className="mt-1 text-sm text-amber-700">
-                  Dormitory accommodation is <span className="font-semibold">gender-separated</span> (separate halls for Prabhuji &amp; Mataji).
-                  Husband and wife <span className="font-semibold">must register individually</span> — each submitting their own separate registration form and selecting Dormitory.
-                  Please do <span className="font-semibold">not</span> add your spouse as a family member if both of you are choosing Dormitory.<span className="font-semibold text-amber-900"> Brahmacharis</span> also <span className="font-semibold">must register individually</span> with their own separate registration form.
-                </p>
-              </div>
-            </div>
-            <RadioGroup
-              label="Family Accommodation (Common utility + Prasadam)"
-              name="familyAccommodation"
-              options={FAMILY_ACCOMMODATION}
-              selectedValue={selectedAccommodation}
-              onSelect={selectAccommodation}
-              error={errors.familyAccommodation}
-            />
-            <div className="space-y-1.5">
-              <Label>
-                Additional Family Accommodation (charges only, for one
-                additional devotee)
-              </Label>
-              <div className="flex flex-col gap-2">
-                {ADDITIONAL_FAMILY_ACCOMMODATION.map((opt) => (
-                  <label
-                    key={opt.value}
-                    className="flex items-center gap-2 text-sm"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={additionalFamilyAccommodation === opt.value}
-                      onChange={(e) =>
-                        setValue(
-                          'additionalFamilyAccommodation',
-                          e.target.checked ? opt.value : ''
-                        )
-                      }
-                    />
-                    {opt.label}
-                  </label>
-                ))}
-              </div>
-              {errors.additionalFamilyAccommodation && (
-                <p className="text-xs text-destructive">
-                  {errors.additionalFamilyAccommodation.message}
-                </p>
-              )}
-            </div>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" {...register('needJourneyPrasad')} />
-              Need Journey Prasad
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" {...register('ownFourWheeler')} />
-              Coming with own 4-wheeler
-            </label>
-          </CardContent>
-        </Card>
-
         {/* Seminar interest */}
         <Card>
           <CardHeader>
-            <CardTitle>Seminar & Service</CardTitle>
+            <CardTitle>Choose A Seminar Topic</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <Field
@@ -474,7 +434,7 @@ export default function Registration() {
                 <Input {...register('preferredSubjectOther')} />
               </Field>
             )}
-
+            <CardTitle>Services For The Pleasure of Guru and Gauranga</CardTitle>
             <div>
               <Label>Service you want to engage in (Select up to 2 only)</Label>
               <p className="mt-1 text-xs text-muted-foreground">
@@ -500,34 +460,171 @@ export default function Registration() {
                 <p className="mt-1 text-xs text-destructive">{errors.services.message}</p>
               )}
             </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" {...register('needJourneyPrasad')} />
+              Need Journey Prasad
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" {...register('ownFourWheeler')} />
+              Coming with own 4-wheeler
+            </label>
+          </CardContent>
+        </Card>
+
+        
+
+        {/* Accommodation */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Accommodation Preferences</CardTitle>
+            <CardDescription>
+              Please select only one option from the 7 accommodation choices.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <RadioGroup
+              label="Without Accommodation / Non Attending"
+              name="nonAttendingType"
+              options={NON_ATTENDING_TYPE}
+              selectedValue={selectedAccommodation}
+              onSelect={selectAccommodation}
+              error={errors.nonAttendingType}
+            />
+            <div className="space-y-2">
+              <RadioGroup
+                label="Dormitory (Prabhuji & Mataji)"
+                name="sharedAccommodation"
+                options={DORMITORY_OPTION ? [DORMITORY_OPTION] : []}
+                selectedValue={selectedAccommodation}
+                onSelect={selectAccommodation}
+                error={errors.sharedAccommodation}
+              />
+              <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
+                <p className="text-sm font-semibold text-amber-800">
+                  📢 Important Note — Dormitory (Prabhuji &amp; Mataji)
+                </p>
+                <p className="mt-1 text-sm text-amber-700">
+                  Dormitory accommodation is <span className="font-semibold">gender-separated</span> (separate halls for Prabhuji &amp; Mataji).
+                  Husband and wife <span className="font-semibold">must register individually</span> — each submitting their own separate registration form and selecting Dormitory.
+                  Please do <span className="font-semibold">not</span> add your spouse as a family member if both of you are choosing Dormitory.<span className="font-semibold text-amber-900"> Brahmacharis</span> also <span className="font-semibold">must register individually</span> with their own separate registration form.
+                </p>
+              </div>
+            </div>
+            <RadioGroup
+              label="Shared Accommodation Per Devotee (Common utility + Prasadam)"
+              name="sharedAccommodation"
+              options={SHARED_ACCOMMODATION_PER_DEVOTEE}
+              selectedValue={selectedAccommodation}
+              onSelect={selectAccommodation}
+              error={errors.sharedAccommodation}
+            />
+
+            <RadioGroup
+              label="Family Accommodation (Common utility + Prasadam)"
+              name="familyAccommodation"
+              options={FAMILY_ACCOMMODATION}
+              selectedValue={selectedAccommodation}
+              onSelect={selectAccommodation}
+              error={errors.familyAccommodation}
+            />
+            {familyAccommodation && (
+              <div className="space-y-2 rounded-md border border-amber-200 bg-amber-50/80 px-4 py-3 shadow-sm">
+                <label className="flex items-center gap-3 text-sm text-amber-950">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border border-slate-400 bg-white text-amber-600 accent-amber-600 focus:ring-2 focus:ring-amber-300"
+                    {...register('extraFamilyDevotee')}
+                  />
+                  <span className="font-medium">Add extra devotee - ₹ 1000/-</span>
+                </label>
+                <p className="text-xs text-amber-700">
+                  Add one extra devotee in the same family accommodation room. This is an optional extra charge for one additional devotee.
+                </p>
+              </div>
+            )}
+            <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
+              <p className="font-semibold text-amber-900">Note:</p>
+              <p className="mt-1 text-sm text-amber-800">
+                One additional devotee may stay in AC Deluxe or Premium Rooms by paying only the Common Utility &amp; Prasadam charges. No extra accommodation charge will apply.
+              </p>
+            </div>
+             {/* <div className="space-y-1.5">
+              <Label>
+                Additional Family Accommodation (charges only, for one
+                additional devotee)
+              </Label>
+              <div className="flex flex-col gap-2">
+                {ADDITIONAL_FAMILY_ACCOMMODATION.map((opt) => (
+                  <label
+                    key={opt.value}
+                    className="flex items-center gap-2 text-sm"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={additionalFamilyAccommodation === opt.value}
+                      onChange={(e) =>
+                        setValue(
+                          'additionalFamilyAccommodation',
+                          e.target.checked ? opt.value : ''
+                        )
+                      }
+                    />
+                    {opt.label}
+                  </label>
+                ))}
+              </div>
+               {errors.additionalFamilyAccommodation && (
+                <p className="text-xs text-destructive">
+                  {errors.additionalFamilyAccommodation.message}
+                </p>
+              )} 
+            </div>  */}
           </CardContent>
         </Card>
 
         {/* Payment */}
         <Card>
           <CardHeader>
-            <CardTitle>Payment</CardTitle>
+            <CardTitle></CardTitle>
             <CardDescription>
-              Please make your payment using the details below.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="rounded-md bg-primary/10 p-4 text-sm space-y-2">
-              <p>
-                <span className="font-semibold">Bank Account Number:</span>{' '}
-                {PAYMENT_INFO.bankAccountNumber}
-              </p>
-              <p>
-                <span className="font-semibold">Account Name:</span>{' '}
-                {PAYMENT_INFO.accountName}
-              </p>
-              <p>
-                <span className="font-semibold">IFSC Code:</span>{' '}
-                {PAYMENT_INFO.ifscCode}
-              </p>
-              <p>
-                <span className="font-semibold">PhonePe / UPI Mobile Number:</span>{' '}
-                {PAYMENT_INFO.phonePeUpiMobileNumber}
+            <div className="payment-summary-card">
+              <div className="payment-summary-header">
+                <span className="payment-summary-badge">Payment Details</span>
+                <p className="payment-summary-description">
+                  Use the below bank / UPI details to complete your registration payment.
+                </p>
+              </div>
+              <div className="payment-details-grid">
+                <div className="payment-detail-row">
+                  <span className="payment-detail-label">Bank Account Number</span>
+                  <span className="payment-detail-value">{PAYMENT_INFO.bankAccountNumber}</span>
+                </div>
+                <div className="payment-detail-row">
+                  <span className="payment-detail-label">Bank Name</span>
+                  <span className="payment-detail-value">{PAYMENT_INFO.bankName}</span>
+                </div>
+                <div className="payment-detail-row">
+                  <span className="payment-detail-label">Branch Name</span>
+                  <span className="payment-detail-value">{PAYMENT_INFO.branchName}</span>
+                </div>
+                <div className="payment-detail-row">
+                  <span className="payment-detail-label">Account Name</span>
+                  <span className="payment-detail-value">{PAYMENT_INFO.accountName}</span>
+                </div>
+                <div className="payment-detail-row">
+                  <span className="payment-detail-label">IFSC Code</span>
+                  <span className="payment-detail-value">{PAYMENT_INFO.ifscCode}</span>
+                </div>
+                <div className="payment-detail-row">
+                  <span className="payment-detail-label">PhonePe / UPI Number</span>
+                  <span className="payment-detail-value">{PAYMENT_INFO.phonePeUpiMobileNumber}</span>
+                </div>
+              </div>
+              <p className="payment-note">
+                Please pay the exact amount and keep your UTR / transaction reference for upload below.
               </p>
             </div>
 
@@ -536,7 +633,7 @@ export default function Registration() {
                 type="button"
                 variant="outline"
                 onClick={() => setShowQrModal(true)}
-                className="w-full sm:w-auto"
+                className="payment-scan-button w-full sm:w-auto"
               >
                 Scan and Pay
               </Button>
@@ -549,21 +646,37 @@ export default function Registration() {
               className="qr-modal"
             >
               <div className="qr-modal-content">
-                <p className="qr-modal-text">
-                  Scan the QR code below to donate via PhonePe / UPI.
-                </p>
+                <div className="qr-modal-header">
+                  <p className="qr-modal-title">Scan to Pay</p>
+                  <p className="qr-modal-subtitle">
+                    Pay securely via PhonePe / UPI and support Sangamahotsav.
+                  </p>
+                </div>
+
+                <div className="qr-modal-account-card">
+                  <p className="qr-modal-account-label">Account Name</p>
+                  <p className="qr-modal-account-value">Sandeep Kumar Gupta</p>
+                  <p className="qr-modal-account-note">
+                    Confirm this name in your UPI app before making the payment.
+                  </p>
+                </div>
+
                 <img
                   src="/images/QR.png"
                   alt="PhonePe / UPI QR code"
                   className="qr-modal-image"
                 />
+
+                <p className="qr-modal-text">
+                  Open PhonePe or any UPI app, scan the QR code above, and complete your donation.
+                </p>
               </div>
             </Modal>
 
-            <Field label="Amount Paid" error={errors.amountPaid}>
+            <Field label="Amount Paid" required error={errors.amountPaid}>
               <Input type="number" step="0.01" {...register('amountPaid')} />
             </Field>
-            <Field label="Payment Reference ID" error={errors.paymentReferenceId}>
+            <Field label="Payment Reference ID" required error={errors.paymentReferenceId}>
               <Input
                 {...register('paymentReferenceId')}
                 placeholder="Transaction / UTR reference number"
@@ -571,6 +684,7 @@ export default function Registration() {
             </Field>
             <Field
               label="Payee Account Name (Name as per bank account)"
+              required
               error={errors.payeeAccountName}
             >
               <Input
@@ -578,7 +692,7 @@ export default function Registration() {
                 placeholder="Name as it appears in your bank account"
               />
             </Field>
-            <Field label="Payment Screenshot" error={errors.paymentScreenshot}>
+            <Field label="Payment Screenshot" required error={errors.paymentScreenshot}>
               <Input
                 type="file"
                 accept="image/*"

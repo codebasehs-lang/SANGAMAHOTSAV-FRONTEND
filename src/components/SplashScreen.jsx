@@ -8,6 +8,16 @@ export default function SplashScreen({ onClose }) {
     <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-gradient-to-b from-amber-50/95 via-orange-50/90 to-white/95 p-4 backdrop-blur-sm">
       <div className="pointer-events-none absolute -left-24 top-[-120px] h-80 w-80 rounded-full bg-amber-300/35 blur-3xl" />
       <div className="pointer-events-none absolute -right-20 bottom-[-80px] h-72 w-72 rounded-full bg-orange-300/30 blur-3xl" />
+      <img
+        src="/images/srilagurudev.png"
+        alt="Sri Gurudev"
+        className="pointer-events-none absolute left-3 top-3 w-14 opacity-80 md:left-5 md:top-5 md:w-20"
+      />
+      <img
+        src="/images/prabhupad.png"
+        alt="Prabhupad"
+        className="pointer-events-none absolute right-3 top-3 w-14 opacity-80 md:right-5 md:top-5 md:w-20"
+      />
 
       <div className="relative mx-auto w-full max-w-3xl rounded-3xl border border-amber-900/15 bg-white/80 p-5 text-slate-900 shadow-2xl backdrop-blur-md md:p-8">
         <div className="grid items-center gap-6 md:grid-cols-[220px_1fr] md:gap-8">

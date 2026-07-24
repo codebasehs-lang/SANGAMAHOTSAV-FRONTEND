@@ -101,9 +101,11 @@ export const SMS_CAMPAIGN_TYPE = [
 
 export const PAYMENT_INFO = {
   bankAccountNumber: '30300100016357',
-  accountName: 'Sandeep Kumar Gupta, Veerender Kumar & Ashok Aneja',
+  bankName: 'BANK OF BARODA',
+  branchName: 'DWARKA NEW DELHI',
+  accountName: 'Sandeep Kumar Gupta',
   ifscCode: 'BARB0DAWARK',
-  phonePeUpiMobileNumber: '7840050175 (Ashok Aneja)',
+  phonePeUpiMobileNumber: '7840050175 (Sandeep Kumar Gupta)',
 };
 
 export const EVENT_INFO = {

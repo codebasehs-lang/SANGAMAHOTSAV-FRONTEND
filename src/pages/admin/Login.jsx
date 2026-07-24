@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -20,6 +20,7 @@ import {
 const schema = z.object({
   email: z.string().email('Enter a valid email'),
   password: z.string().min(1, 'Password is required'),
+  rememberMe: z.boolean().optional(),
 });
 
 export default function Login() {
@@ -28,16 +29,46 @@ export default function Login() {
   const location = useLocation();
   const [serverError, setServerError] = useState('');
 
+  const rememberedLogin = typeof window !== 'undefined'
+    ? JSON.parse(localStorage.getItem('sangam_admin_credentials') || 'null')
+    : null;
+
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors, isSubmitting },
-  } = useForm({ resolver: zodResolver(schema) });
+  } = useForm({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      email: rememberedLogin?.email || '',
+      password: rememberedLogin?.password || '',
+      rememberMe: rememberedLogin?.rememberMe || false,
+    },
+  });
+
+  useEffect(() => {
+    if (rememberedLogin) {
+      reset(rememberedLogin);
+    }
+  }, [rememberedLogin, reset]);
 
   async function onSubmit(values) {
     setServerError('');
     try {
-      await login(values.email, values.password);
+      await login(values.email, values.password, values.rememberMe);
+      if (values.rememberMe) {
+        localStorage.setItem(
+          'sangam_admin_credentials',
+          JSON.stringify({
+            email: values.email,
+            password: values.password,
+            rememberMe: true,
+          })
+        );
+      } else {
+        localStorage.removeItem('sangam_admin_credentials');
+      }
       const to = location.state?.from?.pathname || '/admin';
       navigate(to, { replace: true });
     } catch (err) {
@@ -75,6 +106,14 @@ export default function Login() {
                 </p>
               )}
             </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border border-slate-400 bg-white text-primary focus:ring-2 focus:ring-primary"
+                {...register('rememberMe')}
+              />
+              Remember Me
+            </label>
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? 'Signing in...' : 'Sign In'}
             </Button>

@@ -132,6 +132,12 @@ export default function Home() {
 
 
         <section className="hero">
+          <div className="hero-top-corner hero-top-corner-left">
+            <img src="/images/srilagurudev.png" alt="Sri Lal Gurudev" />
+          </div>
+          <div className="hero-top-corner hero-top-corner-right">
+            <img src="/images/prabhupad.png" alt="Prabhupad" />
+          </div>
           <div className="hero-grid">
             <div className="hero-left">
               <div className="eyebrow-leaf"></div>
@@ -356,7 +362,7 @@ export default function Home() {
 
         <div className="donation-cta">
           <p>
-            Please contact the seva team directly for contribution support using the number below. PHONE: +91 7325912595, +91 7032241089
+            Please contact the seva team directly for contribution support using the number below. PHONE: +91 73259 12595, +91 7032241089
           </p>
           <button
             type="button"
@@ -375,14 +381,30 @@ export default function Home() {
         className="qr-modal"
       >
         <div className="qr-modal-content">
-          <p className="qr-modal-text">
-            Scan the QR code below to donate via PhonePe / UPI.
-          </p>
+          <div className="qr-modal-header">
+            <p className="qr-modal-title">Scan to Donate</p>
+            <p className="qr-modal-subtitle">
+              Pay securely via PhonePe / UPI and support Sangamahotsav.
+            </p>
+          </div>
+
+          <div className="qr-modal-account-card">
+            <p className="qr-modal-account-label">Account Name</p>
+            <p className="qr-modal-account-value">Sandeep Kumar Gupta</p>
+            <p className="qr-modal-account-note">
+              Confirm this name in your UPI app before making the payment.
+            </p>
+          </div>
+
           <img
             src="/images/QR.png"
             alt="PhonePe / UPI donation QR code"
             className="qr-modal-image"
           />
+
+          <p className="qr-modal-text">
+            Open PhonePe or any UPI app, scan the QR code above, and complete your donation.
+          </p>
         </div>
       </Modal>
 

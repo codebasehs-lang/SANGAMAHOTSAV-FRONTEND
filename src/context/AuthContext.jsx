@@ -26,9 +26,9 @@ export function AuthProvider({ children }) {
     bootstrap();
   }, []);
 
-  async function login(email, password) {
+  async function login(email, password, rememberMe = false) {
     const { data } = await api.post('/auth/login', { email, password });
-    tokenStore.set(data.data.token);
+    tokenStore.set(data.data.token, rememberMe);
     setAdmin(data.data.admin);
     return data.data.admin;
   }
