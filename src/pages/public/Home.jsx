@@ -379,7 +379,7 @@ export default function Home() {
             Scan the QR code below to donate via PhonePe / UPI.
           </p>
           <img
-            src="/images/QR code.png"
+            src="/images/QR.png"
             alt="PhonePe / UPI donation QR code"
             className="qr-modal-image"
           />
