@@ -11,7 +11,7 @@ export default function PublicLayout() {
     <div className="flex min-h-screen flex-col">
       {showSplash && <SplashScreen onClose={() => setShowSplash(false)} />}
 
-      <header className="border-b bg-white">
+      <header className="border-b orange" style={{ display: "none" }}>
         <div className="container flex h-16 items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
             <span className="text-xl font-bold text-primary">Sanga Mahotsav</span>
@@ -31,7 +31,7 @@ export default function PublicLayout() {
         <Outlet />
       </main>
 
-      <footer className="border-t bg-white py-6">
+      <footer className="border-t bg-white py-6" style={{ display: "none" }}>
         <div className="container text-center text-sm text-muted-foreground">
           © {new Date().getFullYear()} Sanga Mahotsav. Hare Krishna.
         </div>

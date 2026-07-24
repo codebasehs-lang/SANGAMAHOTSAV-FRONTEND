@@ -100,8 +100,10 @@ export const SMS_CAMPAIGN_TYPE = [
 ];
 
 export const PAYMENT_INFO = {
-  phonePeNumber: '7008920768',
-  payeeName: 'Neeladri Bihari Dash',
+  bankAccountNumber: '30300100016357',
+  accountName: 'Sandeep Kumar Gupta, Veerender Kumar & Ashok Aneja',
+  ifscCode: 'BARB0DAWARK',
+  phonePeUpiMobileNumber: '7840050175 (Ashok Aneja)',
 };
 
 export const EVENT_INFO = {

@@ -21,6 +21,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Modal } from '@/components/ui/modal';
 import {
   Card,
   CardContent,
@@ -105,6 +106,7 @@ export default function Registration() {
   const [serverError, setServerError] = useState('');
   const [showErrorToast, setShowErrorToast] = useState(false);
   const [screenshotPreview, setScreenshotPreview] = useState(null);
+  const [showQrModal, setShowQrModal] = useState(false);
 
   const {
     register,
@@ -397,7 +399,7 @@ export default function Registration() {
                 <p className="mt-1 text-sm text-amber-700">
                   Dormitory accommodation is <span className="font-semibold">gender-separated</span> (separate halls for Prabhuji &amp; Mataji).
                   Husband and wife <span className="font-semibold">must register individually</span> — each submitting their own separate registration form and selecting Dormitory.
-                  Please do <span className="font-semibold">not</span> add your spouse as a family member if both of you are choosing Dormitory.
+                  Please do <span className="font-semibold">not</span> add your spouse as a family member if both of you are choosing Dormitory.<span className="font-semibold text-amber-900"> Brahmacharis</span> also <span className="font-semibold">must register individually</span> with their own separate registration form.
                 </p>
               </div>
             </div>
@@ -510,16 +512,54 @@ export default function Registration() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="rounded-md bg-primary/10 p-4 text-sm">
+            <div className="rounded-md bg-primary/10 p-4 text-sm space-y-2">
               <p>
-                <span className="font-semibold">PhonePe Number:</span>{' '}
-                {PAYMENT_INFO.phonePeNumber}
+                <span className="font-semibold">Bank Account Number:</span>{' '}
+                {PAYMENT_INFO.bankAccountNumber}
               </p>
               <p>
-                <span className="font-semibold">Payee Name:</span>{' '}
-                {PAYMENT_INFO.payeeName}
+                <span className="font-semibold">Account Name:</span>{' '}
+                {PAYMENT_INFO.accountName}
+              </p>
+              <p>
+                <span className="font-semibold">IFSC Code:</span>{' '}
+                {PAYMENT_INFO.ifscCode}
+              </p>
+              <p>
+                <span className="font-semibold">PhonePe / UPI Mobile Number:</span>{' '}
+                {PAYMENT_INFO.phonePeUpiMobileNumber}
               </p>
             </div>
+
+            <div className="flex justify-center">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowQrModal(true)}
+                className="w-full sm:w-auto"
+              >
+                Scan and Pay
+              </Button>
+            </div>
+
+            <Modal
+              open={showQrModal}
+              onClose={() => setShowQrModal(false)}
+              title="Scan and Pay"
+              className="qr-modal"
+            >
+              <div className="qr-modal-content">
+                <p className="qr-modal-text">
+                  Scan the QR code below to donate via PhonePe / UPI.
+                </p>
+                <img
+                  src="/images/QR code.png"
+                  alt="PhonePe / UPI QR code"
+                  className="qr-modal-image"
+                />
+              </div>
+            </Modal>
+
             <Field label="Amount Paid" error={errors.amountPaid}>
               <Input type="number" step="0.01" {...register('amountPaid')} />
             </Field>
