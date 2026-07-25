@@ -238,9 +238,7 @@ export default function Registration() {
         formData.append('paymentScreenshot', values.paymentScreenshot);
       }
 
-      await api.post('/registrations', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      await api.post('/registrations', formData);
       setSubmitted(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {

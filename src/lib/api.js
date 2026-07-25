@@ -5,13 +5,17 @@ const TOKEN_KEY = 'sangam_admin_token';
 /** Shared Axios instance. Base URL uses the Vite dev proxy in dev. */
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api/v1',
-  headers: { 'Content-Type': 'application/json' },
 });
 
 // Attach the bearer token to every request when present.
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem(TOKEN_KEY);
   if (token) config.headers.Authorization = `Bearer ${token}`;
+
+  if (config.data instanceof FormData && config.headers) {
+    delete config.headers['Content-Type'];
+  }
+
   return config;
 });
 
