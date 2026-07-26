@@ -7,6 +7,8 @@ const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api/v1',
 });
 
+const MAX_UPLOAD_SIZE_MB = 5;
+
 // Attach the bearer token to every request when present.
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem(TOKEN_KEY);
@@ -29,6 +31,11 @@ api.interceptors.response.use(
         window.location.assign('/admin/login');
       }
     }
+
+    if (error.response?.status === 413) {
+      error.customMessage = `Request too large. Please upload files smaller than ${MAX_UPLOAD_SIZE_MB} MB.`;
+    }
+
     return Promise.reject(error);
   }
 );
@@ -55,6 +62,7 @@ export const tokenStore = {
 /** Extract a human-readable message from an Axios error. */
 export function getErrorMessage(error) {
   return (
+    error?.customMessage ||
     error?.response?.data?.error?.message ||
     error?.response?.data?.message ||
     error?.message ||
