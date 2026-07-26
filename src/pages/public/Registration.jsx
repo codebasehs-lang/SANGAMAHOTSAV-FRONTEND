@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Trash2, CheckCircle2, CircleAlert, X } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, CircleAlert, X, MapPin } from 'lucide-react';
 
 import api, { getErrorMessage } from '@/lib/api';
 import {
@@ -68,8 +68,8 @@ const schema = z.object({
     required_error: 'Amount paid is required',
     invalid_type_error: 'Amount paid is required',
   }).min(0, 'Amount paid must be at least 0'),
-  paymentReferenceId: z.string().min(1, 'Payment reference is required').max(100),
-  payeeAccountName: z.string().min(1, 'Payee account name is required').max(150),
+  paymentReferenceId: z.string().max(100).optional(),
+  payeeAccountName: z.string().max(150).optional(),
   paymentScreenshot: z.instanceof(File, 'Payment screenshot is required'),
   comments: z.string().optional(),
 });
@@ -313,12 +313,15 @@ export default function Registration() {
         <p className="font-bold text-xl leading-tight text-primary">
           {EVENT_INFO.title}
         </p>
-        <p className="text-sm text-muted-foreground">{EVENT_INFO.gurudeva}</p>
+        <p className="text-sm font-medium text-emerald-700">{EVENT_INFO.gurudeva}</p>
         <p className="mt-2 text-sm font-semibold text-amber-900">
           {EVENT_INFO.startDate} ({EVENT_INFO.startTime}) &ndash;{' '}
           {EVENT_INFO.endDate} ({EVENT_INFO.endTime})
         </p>
-        <p className="text-sm text-muted-foreground">{EVENT_INFO.venue}</p>
+        <p className="mt-2 inline-flex items-center justify-center gap-2 text-sm font-medium text-sky-700">
+          <MapPin className="h-4 w-4 text-sky-700" />
+          <span>{EVENT_INFO.venue}</span>
+        </p>
       </div>
 
       {serverError && (
@@ -690,7 +693,7 @@ export default function Registration() {
             <Field label="Amount Paid" required error={errors.amountPaid}>
               <Input type="number" step="0.01" {...register('amountPaid')} />
             </Field>
-            <Field label="Payment Reference ID" required error={errors.paymentReferenceId}>
+            <Field label="Payment Reference ID" error={errors.paymentReferenceId}>
               <Input
                 {...register('paymentReferenceId')}
                 placeholder="Transaction / UTR reference number"
@@ -698,7 +701,6 @@ export default function Registration() {
             </Field>
             <Field
               label="Payee Account Name (Name as per bank account)"
-              required
               error={errors.payeeAccountName}
             >
               <Input
