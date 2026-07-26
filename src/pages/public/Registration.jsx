@@ -20,6 +20,114 @@ import {
 const DORMITORY_OPTION = SHARED_ACCOMMODATION.find((opt) => opt.value === 'DORMITORY');
 const SHARED_ACCOMMODATION_PER_DEVOTEE = SHARED_ACCOMMODATION.filter((opt) => opt.value !== 'DORMITORY');
 
+const DONATION_ITEMS = [
+  {
+    id: 'deity-garlands-flowers',
+    service: 'Deity Garlands & Flowers',
+    amount: '₹20,000 for Seminar',
+    note: '(per day ₹4,000 / Altar & Outfit)',
+    value: 20000,
+  },
+  {
+    id: 'arcana-seva',
+    service: 'Arcana Seva',
+    amount: '₹3,000',
+    note: '(for five days)',
+    value: 3000,
+  },
+  {
+    id: 'dinner-prasadam',
+    service: 'Dinner Prasadam',
+    amount: '₹30,000',
+    note: 'for 400 devotees (one time)',
+    value: 30000,
+  },
+  {
+    id: 'lunch-prasadam',
+    service: 'Lunch Prasadam Seva',
+    amount: '₹40,000',
+    note: 'for 400 devotees (one time)',
+    value: 40000,
+  },
+  {
+    id: 'sweet-item',
+    service: 'Sweet Item for Lunch / Breakfast / Dinner',
+    amount: '₹6,000',
+    note: 'per time',
+    value: 6000,
+  },
+  {
+    id: 'maha-feast',
+    service: 'Maha Feast on Last Day',
+    amount: '₹50,000',
+    note: 'for 400 devotees (one time)',
+    value: 50000,
+  },
+  {
+    id: 'drinking-water',
+    service: 'Drinking Water',
+    amount: '₹15,000',
+    note: '(₹3,000 per day)',
+    value: 15000,
+  },
+  {
+    id: 'sound-system',
+    service: 'Sound System',
+    amount: '₹25,000',
+    note: '(₹5,000 per day)',
+    value: 25000,
+  },
+  {
+    id: 'seminar-hall',
+    service: 'Seminar Hall',
+    amount: '₹75,000',
+    note: '(₹15,000 per day)',
+    value: 75000,
+  },
+  {
+    id: 'cleaning-supplies',
+    service: 'Cleaning Supplies',
+    amount: '₹5,000',
+    note: '(₹1,000 per day)',
+    value: 5000,
+  },
+  {
+    id: 'children-activities',
+    service: 'Children Activities Supplies',
+    amount: '₹5,000',
+    note: '(₹1,000 per day)',
+    value: 5000,
+  },
+  {
+    id: 'medical-supplies',
+    service: 'Medical Supplies',
+    amount: '₹5,000',
+    note: '(Surplus will be used by Brahmachari Devotees)',
+    value: 5000,
+  },
+  {
+    id: 'juice-prasadam',
+    service: 'Juice Prasadam',
+    amount: '₹5,000',
+    note: 'per one time',
+    value: 5000,
+  },
+  {
+    id: 'dry-prasadam',
+    service: 'Dry Prasadam',
+    amount: '₹5,000',
+    note: 'per one time',
+    value: 5000,
+  },
+  {
+    id: 'childrens-special-prasad',
+    service: "Children's Special Prasad – 100 Plates",
+    amount: '₹5,000',
+    note: '',
+    value: 5000,
+  },
+];
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -64,6 +172,7 @@ const schema = z.object({
   services: z.array(z.string()).max(2, 'You can select up to 2 services only').optional(),
   ownFourWheeler: z.boolean().optional(),
   extraFamilyDevotee: z.boolean().optional(),
+  selectedDonations: z.array(z.string()).optional(),
   amountPaid: z.coerce.number({
     required_error: 'Amount paid is required',
     invalid_type_error: 'Amount paid is required',
@@ -129,6 +238,7 @@ export default function Registration() {
       devoteeCategory: 'DISCIPLE',
       familyMembers: [],
       services: [],
+      selectedDonations: [],
       needJourneyPrasad: false,
       ownFourWheeler: false,
       arrivalDate: '2026-10-02',
@@ -153,6 +263,10 @@ export default function Registration() {
 
   const selectedAccommodation =
     nonAttendingType || sharedAccommodation || familyAccommodation || '';
+  const selectedDonations = watch('selectedDonations') || [];
+  const selectedDonationsTotal = DONATION_ITEMS.reduce((sum, item) => {
+    return selectedDonations.includes(item.id) ? sum + item.value : sum;
+  }, 0);
 
   useEffect(() => {
     const PRICES = {
@@ -181,7 +295,7 @@ export default function Registration() {
     } else if (familyAccommodation) {
       total = PRICES[familyAccommodation] ?? 0;
       if (extraFamilyDevotee) {
-        total += 1000;
+        total += 3500;
         setValue(
           'additionalFamilyAccommodation',
           ADDITIONAL_MAP[familyAccommodation],
@@ -194,12 +308,25 @@ export default function Registration() {
       setValue('additionalFamilyAccommodation', undefined, { shouldDirty: true });
     }
 
+    const donationTotal = DONATION_ITEMS.reduce((sum, item) => {
+      return selectedDonations.includes(item.id) ? sum + item.value : sum;
+    }, 0);
+
+    total += donationTotal;
+
     if (total > 0) {
       setValue('amountPaid', total, { shouldDirty: true, shouldValidate: true });
     } else {
       setValue('amountPaid', undefined, { shouldDirty: true, shouldValidate: true });
     }
-  }, [nonAttendingType, sharedAccommodation, familyAccommodation, extraFamilyDevotee, setValue]);
+  }, [
+    nonAttendingType,
+    sharedAccommodation,
+    familyAccommodation,
+    extraFamilyDevotee,
+    selectedDonations,
+    setValue,
+  ]);
 
   function selectAccommodation(fieldName, value) {
     setValue('nonAttendingType', fieldName === 'nonAttendingType' ? value : '');
@@ -552,7 +679,7 @@ export default function Registration() {
                     className="h-4 w-4 rounded border border-slate-400 bg-white text-amber-600 accent-amber-600 focus:ring-2 focus:ring-amber-300"
                     {...register('extraFamilyDevotee')}
                   />
-                  <span className="font-medium">Add extra devotee - ₹ 1000/-</span>
+                  <span className="font-medium">Add extra devotee - ₹ 3500/-</span>
                 </label>
                 <p className="text-xs text-amber-700">
                   Add one extra devotee in the same family accommodation room. This is an optional extra charge for one additional devotee.
@@ -645,17 +772,6 @@ export default function Registration() {
               </p>
             </div>
 
-            <div className="flex justify-center">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowQrModal(true)}
-                className="payment-scan-button w-full sm:w-auto"
-              >
-                Scan and Pay
-              </Button>
-            </div>
-
             <Modal
               open={showQrModal}
               onClose={() => setShowQrModal(false)}
@@ -690,9 +806,62 @@ export default function Registration() {
               </div>
             </Modal>
 
-            <Field label="Amount Paid" required error={errors.amountPaid}>
-              <Input type="number" step="0.01" {...register('amountPaid')} />
-            </Field>
+            <div className="space-y-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold">SANGA MAHOTSAVA / SEVA OPPORTUNITIES FOR APRIL – 2026</p>
+                  <p className="text-xs text-muted-foreground">Select any donation items to add to your registration amount.</p>
+                </div>
+                <span className="rounded-full bg-emerald-100 px-3 py-1 text-sm font-medium text-emerald-800">
+                  Selected ₹{selectedDonationsTotal.toLocaleString()}
+                </span>
+              </div>
+              <div className="grid gap-3">
+                {DONATION_ITEMS.map((item) => (
+                  <label
+                    key={item.id}
+                    className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3 transition hover:border-slate-300"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="font-semibold">{item.service}</p>
+                        <p className="text-sm text-muted-foreground">{item.note}</p>
+                      </div>
+                      <span className="text-sm font-semibold">{item.amount}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        value={item.id}
+                        {...register('selectedDonations')}
+                        className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
+                      />
+                      <span className="text-sm">Add this donation</span>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="grid gap-4 lg:grid-cols-[1.5fr_auto] lg:items-end">
+              <Field label="Total Amount to be Paid" required error={errors.amountPaid}>
+                <Input
+                  type="number"
+                  step="0.01"
+                  {...register('amountPaid')}
+                  className="border-amber-300 bg-amber-50 text-amber-900 focus:border-amber-500 focus:ring-amber-200"
+                />
+              </Field>
+              <div className="flex items-end">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setShowQrModal(true)}
+                  className="w-full sm:w-auto bg-gradient-to-r from-orange-500 to-amber-400 text-white shadow-lg shadow-amber-200/60 hover:from-orange-600 hover:to-amber-500"
+                >
+                  Scan and Pay
+                </Button>
+              </div>
+            </div>
             <Field label="Payment Reference ID" error={errors.paymentReferenceId}>
               <Input
                 {...register('paymentReferenceId')}

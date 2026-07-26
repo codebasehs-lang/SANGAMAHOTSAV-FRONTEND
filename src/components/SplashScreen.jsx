@@ -47,10 +47,10 @@ export default function SplashScreen({ onClose }) {
                 9th Sanga Mohatsav
               </p>
               <p className="text-2xl font-bold leading-tight text-slate-900 md:text-[2rem]">
-                5th Vyasa Puja
+                
               </p>
               <p className="text-lg font-semibold leading-tight text-slate-800 md:text-xl md:whitespace-nowrap">
-                56th Holy Appearance Day Celebration
+                
               </p>
             </div>
             <p className="mt-4 text-sm text-slate-700 md:text-base">

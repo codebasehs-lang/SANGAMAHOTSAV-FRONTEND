@@ -110,9 +110,9 @@ export const PAYMENT_INFO = {
 
 export const EVENT_INFO = {
   title:
-    '9th Sanga Mahotsav | 5th Vyasa Puja & 56th Holy Appearance Day Celebration',
+    '9th Sanga Mahotsav',
   gurudeva:
-    'of our Parama Ārādhyatama Gurudeva His Holiness Haladhara Swami Maharaja',
+    '',
   shortName: 'Vyasa Puja 2026',
   startDate: '2nd October 2026',
   startTime: '8:00 AM',
