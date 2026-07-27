@@ -15,118 +15,13 @@ import {
   SERVICES,
   PAYMENT_INFO,
   EVENT_INFO,
+  DONATION_ITEMS,
 } from '@/lib/constants';
 
 const DORMITORY_OPTION = SHARED_ACCOMMODATION.find((opt) => opt.value === 'DORMITORY');
 const SHARED_ACCOMMODATION_PER_DEVOTEE = SHARED_ACCOMMODATION.filter((opt) => opt.value !== 'DORMITORY');
 
-const DONATION_ITEMS = [
-  {
-    id: 'deity-garlands-flowers',
-    service: 'Deity Garlands & Flowers',
-    amount: '₹20,000 for Seminar',
-    note: '(per day ₹4,000 / Altar & Outfit)',
-    value: 20000,
-  },
-  {
-    id: 'arcana-seva',
-    service: 'Arcana Seva',
-    amount: '₹3,000',
-    note: '(for five days)',
-    value: 3000,
-  },
-  {
-    id: 'dinner-prasadam',
-    service: 'Dinner Prasadam',
-    amount: '₹30,000',
-    note: 'for 400 devotees (one time)',
-    value: 30000,
-  },
-  {
-    id: 'lunch-prasadam',
-    service: 'Lunch Prasadam Seva',
-    amount: '₹40,000',
-    note: 'for 400 devotees (one time)',
-    value: 40000,
-  },
-  {
-    id: 'sweet-item',
-    service: 'Sweet Item for Lunch / Breakfast / Dinner',
-    amount: '₹6,000',
-    note: 'per time',
-    value: 6000,
-  },
-  {
-    id: 'maha-feast',
-    service: 'Maha Feast on Last Day',
-    amount: '₹50,000',
-    note: 'for 400 devotees (one time)',
-    value: 50000,
-  },
-  {
-    id: 'drinking-water',
-    service: 'Drinking Water',
-    amount: '₹15,000',
-    note: '(₹3,000 per day)',
-    value: 15000,
-  },
-  {
-    id: 'sound-system',
-    service: 'Sound System',
-    amount: '₹25,000',
-    note: '(₹5,000 per day)',
-    value: 25000,
-  },
-  {
-    id: 'seminar-hall',
-    service: 'Seminar Hall',
-    amount: '₹75,000',
-    note: '(₹15,000 per day)',
-    value: 75000,
-  },
-  {
-    id: 'cleaning-supplies',
-    service: 'Cleaning Supplies',
-    amount: '₹5,000',
-    note: '(₹1,000 per day)',
-    value: 5000,
-  },
-  {
-    id: 'children-activities',
-    service: 'Children Activities Supplies',
-    amount: '₹5,000',
-    note: '(₹1,000 per day)',
-    value: 5000,
-  },
-  {
-    id: 'medical-supplies',
-    service: 'Medical Supplies',
-    amount: '₹5,000',
-    note: '(Surplus will be used by Brahmachari Devotees)',
-    value: 5000,
-  },
-  {
-    id: 'juice-prasadam',
-    service: 'Juice Prasadam',
-    amount: '₹5,000',
-    note: 'per one time',
-    value: 5000,
-  },
-  {
-    id: 'dry-prasadam',
-    service: 'Dry Prasadam',
-    amount: '₹5,000',
-    note: 'per one time',
-    value: 5000,
-  },
-  {
-    id: 'childrens-special-prasad',
-    service: "Children's Special Prasad – 100 Plates",
-    amount: '₹5,000',
-    note: '',
-    value: 5000,
-  },
-];
+// donation items are exported from lib/constants.js
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -270,10 +165,9 @@ export default function Registration() {
 
   useEffect(() => {
     const PRICES = {
-      NON_ATTENDING_DISCIPLE: 2000,
       ATTENDING_NOT_STAYING: 3500,
       DORMITORY: 5000,
-      NON_AC_SHARING: 5500,
+      NON_AC_SHARING: 6000,
       AC_SHARING: 7000,
       DELUXE_AC: 18000,
       PREMIUM_AC: 19500,
@@ -347,7 +241,7 @@ export default function Registration() {
       const formData = new FormData();
 
       // Append all scalar fields, skipping empty/undefined
-      const skip = new Set(['familyMembers', 'services', 'paymentScreenshot']);
+      const skip = new Set(['familyMembers', 'services', 'paymentScreenshot', 'selectedDonations']);
       for (const [key, val] of Object.entries(values)) {
         if (skip.has(key)) continue;
         if (val === '' || val === undefined || val === null) continue;
@@ -359,6 +253,16 @@ export default function Registration() {
       formData.append('familyMembers', JSON.stringify(members));
       const services = values.services || [];
       formData.append('services', JSON.stringify(services));
+
+      // Donation items: convert selected donation ids into objects with id + amount
+      const selected = values.selectedDonations || [];
+      const donationItems = selected.map((id) => {
+        const item = DONATION_ITEMS.find((d) => d.id === id);
+        return { id, amount: item ? item.value : 0 };
+      });
+      if (donationItems.length) {
+        formData.append('donationItems', JSON.stringify(donationItems));
+      }
 
       // File
       if (values.paymentScreenshot instanceof File) {
@@ -655,7 +559,7 @@ export default function Registration() {
               </div>
             </div>
             <RadioGroup
-              label="Shared Accommodation Per Devotee (Common utility + Prasadam)"
+              label="Shared Accommodation Per Devotee (3 devotees per room Common utility + Prasadam)"
               name="sharedAccommodation"
               options={SHARED_ACCOMMODATION_PER_DEVOTEE}
               selectedValue={selectedAccommodation}
@@ -664,7 +568,7 @@ export default function Registration() {
             />
 
             <RadioGroup
-              label="Family Accommodation (Common utility + Prasadam)"
+              label="Family Accommodation (2 devotees Per Room Common utility + Prasadam)"
               name="familyAccommodation"
               options={FAMILY_ACCOMMODATION}
               selectedValue={selectedAccommodation}

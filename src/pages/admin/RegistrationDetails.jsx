@@ -4,6 +4,7 @@ import { ArrowLeft, X } from 'lucide-react';
 
 import api, { getErrorMessage } from '@/lib/api';
 import { humanize, formatDate } from '@/lib/utils';
+import { DONATION_ITEMS } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -88,6 +89,15 @@ export default function RegistrationDetails() {
   const family = Array.isArray(reg.familyMembers)
     ? reg.familyMembers.map((m) => `${m.name} (${m.age})`).join(', ')
     : '';
+  const donations = Array.isArray(reg.donationItems)
+    ? reg.donationItems
+        .map((d) => {
+          const meta = DONATION_ITEMS.find((i) => i.id === d.id);
+          const label = meta ? meta.service : d.id;
+          return `${label} – ₹ ${Number(d.amount).toLocaleString()}`;
+        })
+        .join(', ')
+    : '';
 
   return (
     <div className="space-y-4">
@@ -155,6 +165,7 @@ export default function RegistrationDetails() {
                 }
               />
               <Row label="Services" value={services} />
+              <Row label="Donations" value={donations} />
               <Row label="Amount Paid" value={reg.amountPaid} />
               <Row label="Payment Reference ID" value={reg.paymentReferenceId} />
               <Row label="Payee Account Name" value={reg.payeeAccountName} />

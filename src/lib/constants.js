@@ -9,13 +9,12 @@ export const DEVOTEE_CATEGORY = [
 ];
 
 export const NON_ATTENDING_TYPE = [
-  { value: 'NON_ATTENDING_DISCIPLE', label: 'Non attending disciple - ₹ 2000/-' },
   { value: 'ATTENDING_NOT_STAYING', label: 'Attending but not staying - ₹ 3500/-' },
 ];
 
 export const SHARED_ACCOMMODATION = [
-  { value: 'DORMITORY', label: 'Dormitory - ₹ 5000/-' },
-  { value: 'NON_AC_SHARING', label: 'Non AC Sharing - ₹ 5500/-' },
+  { value: 'DORMITORY', label: 'AC Dormitory - ₹ 5000/-' },
+  { value: 'NON_AC_SHARING', label: 'Non AC Sharing - ₹ 6000/-' },
   { value: 'AC_SHARING', label: 'AC Sharing - ₹ 7000/-' },
 ];
 
@@ -120,3 +119,111 @@ export const EVENT_INFO = {
   endTime: '1:00 PM',
   venue: 'ARC The Boutique Hotel, Bhubaneswar, Odisha',
 };
+
+export const DONATION_ITEMS = [
+  {
+    id: 'deity-garlands-flowers',
+    service: 'Deity Garlands & Flowers',
+    amount: '₹20,000 for Seminar',
+    note: '(per day ₹4,000 / Altar & Outfit)',
+    value: 20000,
+  },
+  {
+    id: 'arcana-seva',
+    service: 'Arcana Seva',
+    amount: '₹3,000',
+    note: '(for five days)',
+    value: 3000,
+  },
+  {
+    id: 'dinner-prasadam',
+    service: 'Dinner Prasadam',
+    amount: '₹30,000',
+    note: 'for 400 devotees (one time)',
+    value: 30000,
+  },
+  {
+    id: 'lunch-prasadam',
+    service: 'Lunch Prasadam Seva',
+    amount: '₹40,000',
+    note: 'for 400 devotees (one time)',
+    value: 40000,
+  },
+  {
+    id: 'sweet-item',
+    service: 'Sweet Item for Lunch / Breakfast / Dinner',
+    amount: '₹6,000',
+    note: 'per time',
+    value: 6000,
+  },
+  {
+    id: 'maha-feast',
+    service: 'Maha Feast on Last Day',
+    amount: '₹50,000',
+    note: 'for 400 devotees (one time)',
+    value: 50000,
+  },
+  {
+    id: 'drinking-water',
+    service: 'Drinking Water',
+    amount: '₹15,000',
+    note: '(₹3,000 per day)',
+    value: 15000,
+  },
+  {
+    id: 'sound-system',
+    service: 'Sound System',
+    amount: '₹25,000',
+    note: '(₹5,000 per day)',
+    value: 25000,
+  },
+  {
+    id: 'seminar-hall',
+    service: 'Seminar Hall',
+    amount: '₹75,000',
+    note: '(₹15,000 per day)',
+    value: 75000,
+  },
+  {
+    id: 'cleaning-supplies',
+    service: 'Cleaning Supplies',
+    amount: '₹5,000',
+    note: '(₹1,000 per day)',
+    value: 5000,
+  },
+  {
+    id: 'children-activities',
+    service: 'Children Activities Supplies',
+    amount: '₹5,000',
+    note: '(₹1,000 per day)',
+    value: 5000,
+  },
+  {
+    id: 'medical-supplies',
+    service: 'Medical Supplies',
+    amount: '₹5,000',
+    note: '(Surplus will be used by Brahmachari Devotees)',
+    value: 5000,
+  },
+  {
+    id: 'juice-prasadam',
+    service: 'Juice Prasadam',
+    amount: '₹5,000',
+    note: 'per one time',
+    value: 5000,
+  },
+  {
+    id: 'dry-prasadam',
+    service: 'Dry Prasadam',
+    amount: '₹5,000',
+    note: 'per one time',
+    value: 5000,
+  },
+  {
+    id: 'childrens-special-prasad',
+    service: "Children's Special Prasad – 100 Plates",
+    amount: '₹5,000',
+    note: '',
+    value: 5000,
+  },
+];
