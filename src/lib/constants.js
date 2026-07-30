@@ -6,6 +6,7 @@
 export const DEVOTEE_CATEGORY = [
   { value: 'DISCIPLE', label: 'Disciple' },
   { value: 'NON_DISCIPLE', label: 'Non Disciple' },
+  { value: 'BRAHMACHARI', label: 'Brahmachari' },
 ];
 
 export const NON_ATTENDING_TYPE = [
@@ -21,6 +22,21 @@ export const SHARED_ACCOMMODATION = [
 export const FAMILY_ACCOMMODATION = [
   { value: 'DELUXE_AC', label: 'AC Room - Deluxe AC - ₹ 18000/-' },
   { value: 'PREMIUM_AC', label: 'AC Room - Premium AC - ₹ 19500/-' },
+];
+
+export const EXTRA_CHARGE_OPTIONS = [
+  {
+    value: 'EXTRA_DEVOTEE',
+    label: 'Add extra devotee - ₹ 3500/-',
+    amount: 3500,
+    description: 'Add one extra devotee in the same family accommodation room.',
+  },
+  {
+    value: 'CHILD_12_PLUS',
+    label: 'Children (+12 years) - ₹ 1000/-',
+    amount: 1000,
+    description: 'Charge for children above 12 years staying in family accommodation.',
+  },
 ];
 
 export const ADDITIONAL_FAMILY_ACCOMMODATION = [
@@ -121,6 +137,22 @@ export const EVENT_INFO = {
 };
 
 export const DONATION_ITEMS = [
+  {
+    id: 'vyaspuja-dakshina',
+    service: 'Vyaspuja Dakshina',
+    amount: 'Any amount',
+    note: 'Enter the amount you wish to contribute',
+    value: 0,
+    custom: true,
+  },
+  {
+    id: 'custom-purpose-donation',
+    service: 'Purpose',
+    amount: 'Any amount',
+    note: 'Enter any purpose and the amount you wish to contribute',
+    value: 0,
+    custom: true,
+  },
   {
     id: 'deity-garlands-flowers',
     service: 'Deity Garlands & Flowers',

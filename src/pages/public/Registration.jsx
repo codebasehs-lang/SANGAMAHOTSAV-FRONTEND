@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Trash2, CheckCircle2, CircleAlert, X, MapPin } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, CircleAlert, X, MapPin, CalendarDays } from 'lucide-react';
 
 import api, { getErrorMessage } from '@/lib/api';
 import {
@@ -20,6 +20,59 @@ import {
 
 const DORMITORY_OPTION = SHARED_ACCOMMODATION.find((opt) => opt.value === 'DORMITORY');
 const SHARED_ACCOMMODATION_PER_DEVOTEE = SHARED_ACCOMMODATION.filter((opt) => opt.value !== 'DORMITORY');
+
+const EXTRA_CHARGE_OPTIONS = [
+  { value: 'EXTRA_DEVOTEE', label: 'Add extra devotee - ₹ 3500/-', amount: 3500 },
+  { value: 'CHILD_12_PLUS', label: 'Children (+12 years) - ₹ 1000/-', amount: 1000 },
+];
+
+const MONTHS_SHORT = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+
+function formatIsoToDisplayDate(isoDate) {
+  if (!isoDate || typeof isoDate !== 'string') return '';
+  const match = isoDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return isoDate;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const monthLabel = MONTHS_SHORT[month - 1];
+
+  if (!monthLabel || day < 1 || day > 31 || year < 1900) return isoDate;
+
+  return `${String(day).padStart(2, '0')}-${monthLabel}-${year}`;
+}
+
+function parseDisplayDateToIso(displayDate) {
+  if (!displayDate || typeof displayDate !== 'string') return '';
+  const match = displayDate.trim().match(/^(\d{1,2})-([a-zA-Z]{3})-(\d{4})$/);
+  if (!match) return '';
+
+  const day = Number(match[1]);
+  const monthToken = match[2].toLowerCase();
+  const year = Number(match[3]);
+  const monthIndex = MONTHS_SHORT.findIndex((m) => m.toLowerCase() === monthToken);
+
+  if (monthIndex < 0 || day < 1 || day > 31 || year < 1900) return '';
+
+  const testDate = new Date(year, monthIndex, day);
+  if (
+    testDate.getFullYear() !== year ||
+    testDate.getMonth() !== monthIndex ||
+    testDate.getDate() !== day
+  ) {
+    return '';
+  }
+
+  return `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+function normalizeDateForApi(value) {
+  if (!value || typeof value !== 'string') return '';
+  const trimmed = value.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+  return parseDisplayDateToIso(trimmed);
+}
 
 // donation items are exported from lib/constants.js
 
@@ -41,7 +94,7 @@ const schema = z.object({
   name: z.string().min(1, 'Name is required'),
   age: z.coerce.number().min(0).max(120),
   initiatedName: z.string().optional(),
-  devoteeCategory: z.enum(['DISCIPLE', 'NON_DISCIPLE']),
+  devoteeCategory: z.enum(['DISCIPLE', 'NON_DISCIPLE', 'BRAHMACHARI']),
   familyMembers: z
     .array(
       z.object({
@@ -66,15 +119,18 @@ const schema = z.object({
   preferredSubjectOther: z.string().optional(),
   services: z.array(z.string()).max(2, 'You can select up to 2 services only').optional(),
   ownFourWheeler: z.boolean().optional(),
-  extraFamilyDevotee: z.boolean().optional(),
+  extraCharges: z.array(z.string()).optional(),
   selectedDonations: z.array(z.string()).optional(),
+  customDonationAmount: z.string().optional(),
+  customDonationPurpose: z.string().optional(),
+  customDonationPurposeAmount: z.string().optional(),
   amountPaid: z.coerce.number({
     required_error: 'Amount paid is required',
     invalid_type_error: 'Amount paid is required',
   }).min(0, 'Amount paid must be at least 0'),
   paymentReferenceId: z.string().max(100).optional(),
   payeeAccountName: z.string().max(150).optional(),
-  paymentScreenshot: z.instanceof(File, 'Payment screenshot is required'),
+  paymentScreenshot: z.any().optional(),
   comments: z.string().optional(),
 });
 
@@ -90,7 +146,7 @@ function Field({ label, error, required, children }) {
   );
 }
 
-function RadioGroup({ label, name, options, selectedValue, onSelect, error }) {
+function RadioGroup({ label, name, options, selectedValue, onSelect, error, disabled }) {
   return (
     <div className="space-y-1.5">
       <Label>{label}</Label>
@@ -102,7 +158,8 @@ function RadioGroup({ label, name, options, selectedValue, onSelect, error }) {
               name={name}
               value={opt.value}
               checked={selectedValue === opt.value}
-              onChange={() => onSelect(name, opt.value)}
+              disabled={disabled}
+              onChange={() => !disabled && onSelect(name, opt.value)}
             />
             {opt.label}
           </label>
@@ -119,6 +176,8 @@ export default function Registration() {
   const [showErrorToast, setShowErrorToast] = useState(false);
   const [screenshotPreview, setScreenshotPreview] = useState(null);
   const [showQrModal, setShowQrModal] = useState(false);
+  const arrivalDatePickerRef = useRef(null);
+  const departureDatePickerRef = useRef(null);
 
   const {
     register,
@@ -134,11 +193,17 @@ export default function Registration() {
       familyMembers: [],
       services: [],
       selectedDonations: [],
+      extraCharges: [],
+      amountPaid: 0,
+      paymentScreenshot: undefined,
+      customDonationAmount: '',
+      customDonationPurpose: '',
+      customDonationPurposeAmount: '',
       needJourneyPrasad: false,
       ownFourWheeler: false,
-      arrivalDate: '2026-10-02',
+      arrivalDate: formatIsoToDisplayDate('2026-10-02'),
       arrivalTime: '08:00',
-      departureDate: '2026-10-07',
+      departureDate: formatIsoToDisplayDate('2026-10-07'),
       departureTime: '14:00',
     },
   });
@@ -149,19 +214,49 @@ export default function Registration() {
   });
 
   const preferredSubject = watch('preferredSubject');
-  const additionalFamilyAccommodation = watch('additionalFamilyAccommodation');
   const selectedServices = watch('services') || [];
   const nonAttendingType = watch('nonAttendingType');
   const sharedAccommodation = watch('sharedAccommodation');
   const familyAccommodation = watch('familyAccommodation');
-  const extraFamilyDevotee = watch('extraFamilyDevotee');
+  const isBrahmachari = watch('devoteeCategory') === 'BRAHMACHARI';
+  const extraCharges = watch('extraCharges') || [];
 
   const selectedAccommodation =
     nonAttendingType || sharedAccommodation || familyAccommodation || '';
   const selectedDonations = watch('selectedDonations') || [];
-  const selectedDonationsTotal = DONATION_ITEMS.reduce((sum, item) => {
-    return selectedDonations.includes(item.id) ? sum + item.value : sum;
-  }, 0);
+  const customDonationAmount = Number(watch('customDonationAmount') || 0);
+  const customDonationPurposeAmount = Number(watch('customDonationPurposeAmount') || 0);
+
+  const extraChargesTotal = EXTRA_CHARGE_OPTIONS.reduce(
+    (sum, opt) => (extraCharges.includes(opt.value) ? sum + opt.amount : sum),
+    0
+  );
+
+  function getDonationTotal(selectedIds, customAmount, customPurposeAmountValue) {
+    return DONATION_ITEMS.reduce((sum, item) => {
+      if (!selectedIds.includes(item.id)) return sum;
+      if (item.id === 'vyaspuja-dakshina') {
+        return sum + (Number(customAmount) || 0);
+      }
+      if (item.id === 'custom-purpose-donation') {
+        return sum + (Number(customPurposeAmountValue) || 0);
+      }
+      return sum + item.value;
+    }, 0);
+  }
+
+  const selectedDonationsTotal = getDonationTotal(selectedDonations, customDonationAmount, customDonationPurposeAmount);
+
+  // When Brahmachari is selected, clear/disable unrelated fields
+  useEffect(() => {
+    if (isBrahmachari) {
+      setValue('familyMembers', []);
+      setValue('nonAttendingType', '');
+      setValue('sharedAccommodation', '');
+      setValue('familyAccommodation', '');
+      setValue('extraCharges', []);
+    }
+  }, [isBrahmachari, setValue]);
 
   useEffect(() => {
     const PRICES = {
@@ -173,40 +268,29 @@ export default function Registration() {
       PREMIUM_AC: 19500,
     };
 
-    const ADDITIONAL_MAP = {
-      DELUXE_AC: 'DELUXE',
-      PREMIUM_AC: 'PREMIUM',
-    };
-
     let total = 0;
 
     if (nonAttendingType) {
       total = PRICES[nonAttendingType] ?? 0;
-      setValue('additionalFamilyAccommodation', undefined, { shouldDirty: true });
     } else if (sharedAccommodation) {
       total = PRICES[sharedAccommodation] ?? 0;
-      setValue('additionalFamilyAccommodation', undefined, { shouldDirty: true });
     } else if (familyAccommodation) {
       total = PRICES[familyAccommodation] ?? 0;
-      if (extraFamilyDevotee) {
-        total += 3500;
-        setValue(
-          'additionalFamilyAccommodation',
-          ADDITIONAL_MAP[familyAccommodation],
-          { shouldDirty: true }
-        );
-      } else {
-        setValue('additionalFamilyAccommodation', undefined, { shouldDirty: true });
-      }
-    } else {
-      setValue('additionalFamilyAccommodation', undefined, { shouldDirty: true });
     }
 
-    const donationTotal = DONATION_ITEMS.reduce((sum, item) => {
-      return selectedDonations.includes(item.id) ? sum + item.value : sum;
-    }, 0);
+    const donationTotal = getDonationTotal(
+      selectedDonations,
+      Number(watch('customDonationAmount') || 0),
+      Number(watch('customDonationPurposeAmount') || 0)
+    );
+
+    if (isBrahmachari) {
+      setValue('amountPaid', donationTotal, { shouldDirty: true, shouldValidate: true });
+      return;
+    }
 
     total += donationTotal;
+    total += extraChargesTotal;
 
     if (total > 0) {
       setValue('amountPaid', total, { shouldDirty: true, shouldValidate: true });
@@ -217,8 +301,11 @@ export default function Registration() {
     nonAttendingType,
     sharedAccommodation,
     familyAccommodation,
-    extraFamilyDevotee,
+    isBrahmachari,
     selectedDonations,
+    customDonationAmount,
+    customDonationPurposeAmount,
+    extraChargesTotal,
     setValue,
   ]);
 
@@ -234,17 +321,52 @@ export default function Registration() {
     );
   }
 
+  function openNativeDatePicker(inputRef) {
+    if (!inputRef?.current) return;
+    if (typeof inputRef.current.showPicker === 'function') {
+      inputRef.current.showPicker();
+      return;
+    }
+    inputRef.current.click();
+  }
+
   async function onSubmit(values) {
     setServerError('');
     setShowErrorToast(false);
     try {
+      const arrivalDateApi = normalizeDateForApi(values.arrivalDate);
+      const departureDateApi = normalizeDateForApi(values.departureDate);
+
+      if (values.arrivalDate && !arrivalDateApi) {
+        setServerError('Please enter Arrival Date in dd-mon-yyyy format (example: 02-oct-2026).');
+        setShowErrorToast(true);
+        return;
+      }
+
+      if (values.departureDate && !departureDateApi) {
+        setServerError('Please enter Departure Date in dd-mon-yyyy format (example: 07-oct-2026).');
+        setShowErrorToast(true);
+        return;
+      }
+
       const formData = new FormData();
 
       // Append all scalar fields, skipping empty/undefined
-      const skip = new Set(['familyMembers', 'services', 'paymentScreenshot', 'selectedDonations']);
+      const skip = new Set(['familyMembers', 'services', 'paymentScreenshot', 'selectedDonations', 'extraCharges']);
       for (const [key, val] of Object.entries(values)) {
         if (skip.has(key)) continue;
         if (val === '' || val === undefined || val === null) continue;
+
+        if (key === 'arrivalDate') {
+          formData.append('arrivalDate', arrivalDateApi);
+          continue;
+        }
+
+        if (key === 'departureDate') {
+          formData.append('departureDate', departureDateApi);
+          continue;
+        }
+
         formData.append(key, val);
       }
 
@@ -256,12 +378,55 @@ export default function Registration() {
 
       // Donation items: convert selected donation ids into objects with id + amount
       const selected = values.selectedDonations || [];
-      const donationItems = selected.map((id) => {
+      if (selected.includes('vyaspuja-dakshina')) {
+        const customAmount = Number(values.customDonationAmount);
+        if (!Number.isFinite(customAmount) || customAmount <= 0) {
+          setServerError('Please enter a valid amount for Vyaspuja Dakshina.');
+          setShowErrorToast(true);
+          return;
+        }
+      }
+      if (selected.includes('custom-purpose-donation')) {
+        const customAmount = Number(values.customDonationPurposeAmount);
+        const purpose = (values.customDonationPurpose || '').trim();
+        if (!Number.isFinite(customAmount) || customAmount <= 0) {
+          setServerError('Please enter a valid amount for the custom purpose donation.');
+          setShowErrorToast(true);
+          return;
+        }
+        if (!purpose) {
+          setServerError('Please enter a purpose for the custom purpose donation.');
+          setShowErrorToast(true);
+          return;
+        }
+      }
+
+      const donationItems = selected.flatMap((id) => {
+        if (id === 'vyaspuja-dakshina') {
+          const customAmount = Number(values.customDonationAmount);
+          if (!Number.isFinite(customAmount) || customAmount <= 0) {
+            return [];
+          }
+          return [{ id, amount: customAmount }];
+        }
+        if (id === 'custom-purpose-donation') {
+          const customAmount = Number(values.customDonationPurposeAmount);
+          const purpose = (values.customDonationPurpose || '').trim();
+          if (!Number.isFinite(customAmount) || customAmount <= 0 || !purpose) {
+            return [];
+          }
+          return [{ id, amount: customAmount, purpose }];
+        }
+
         const item = DONATION_ITEMS.find((d) => d.id === id);
-        return { id, amount: item ? item.value : 0 };
+        return item ? [{ id, amount: item.value }] : [];
       });
       if (donationItems.length) {
         formData.append('donationItems', JSON.stringify(donationItems));
+      }
+      const extraCharges = values.extraCharges || [];
+      if (extraCharges.length) {
+        formData.append('extraCharges', JSON.stringify(extraCharges));
       }
 
       // File
@@ -397,7 +562,7 @@ export default function Registration() {
 
         {/* Family members */}
         <Card>
-          <CardHeader className="flex-row items-center justify-between space-y-0">
+            <CardHeader className="flex-row items-center justify-between space-y-0">
             <div>
               <CardTitle>Family Members / Relatives</CardTitle>
               <CardDescription>Add names along with age.</CardDescription>
@@ -407,6 +572,7 @@ export default function Registration() {
               variant="outline"
               size="sm"
               onClick={() => append({ name: '', age: '' })}
+              disabled={isBrahmachari}
             >
               <Plus className="h-4 w-4" /> Add
             </Button>
@@ -421,17 +587,18 @@ export default function Registration() {
               <div key={f.id} className="flex items-end gap-2">
                 <div className="flex-1">
                   <Label className="text-xs">Name</Label>
-                  <Input {...register(`familyMembers.${i}.name`)} />
+                  <Input {...register(`familyMembers.${i}.name`)} disabled={isBrahmachari} />
                 </div>
                 <div className="w-24">
                   <Label className="text-xs">Age</Label>
-                  <Input type="number" {...register(`familyMembers.${i}.age`)} />
+                  <Input type="number" {...register(`familyMembers.${i}.age`)} disabled={isBrahmachari} />
                 </div>
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon"
                   onClick={() => remove(i)}
+                  disabled={isBrahmachari}
                 >
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
@@ -447,13 +614,99 @@ export default function Registration() {
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             <Field label="Arrival Date" error={errors.arrivalDate}>
-              <Input type="date" {...register('arrivalDate')} />
+              <div className="relative">
+                <Input
+                  type="text"
+                  placeholder="dd-mon-yyyy"
+                  value={watch('arrivalDate') || ''}
+                  onChange={(e) =>
+                    setValue('arrivalDate', e.target.value, {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    })
+                  }
+                  onBlur={(e) => {
+                    const normalized = normalizeDateForApi(e.target.value);
+                    if (normalized) {
+                      setValue('arrivalDate', formatIsoToDisplayDate(normalized), {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      });
+                    }
+                  }}
+                />
+                <input
+                  ref={arrivalDatePickerRef}
+                  type="date"
+                  tabIndex={-1}
+                  value={normalizeDateForApi(watch('arrivalDate')) || ''}
+                  onChange={(e) =>
+                    setValue('arrivalDate', formatIsoToDisplayDate(e.target.value), {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    })
+                  }
+                  className="pointer-events-none absolute h-0 w-0 opacity-0"
+                  aria-hidden="true"
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  onClick={() => openNativeDatePicker(arrivalDatePickerRef)}
+                  aria-label="Open arrival date calendar"
+                >
+                  <CalendarDays className="h-4 w-4" />
+                </button>
+              </div>
             </Field>
             <Field label="Arrival Time" error={errors.arrivalTime}>
               <Input type="time" {...register('arrivalTime')} />
             </Field>
             <Field label="Departure Date" error={errors.departureDate}>
-              <Input type="date" {...register('departureDate')} />
+              <div className="relative">
+                <Input
+                  type="text"
+                  placeholder="dd-mon-yyyy"
+                  value={watch('departureDate') || ''}
+                  onChange={(e) =>
+                    setValue('departureDate', e.target.value, {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    })
+                  }
+                  onBlur={(e) => {
+                    const normalized = normalizeDateForApi(e.target.value);
+                    if (normalized) {
+                      setValue('departureDate', formatIsoToDisplayDate(normalized), {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      });
+                    }
+                  }}
+                />
+                <input
+                  ref={departureDatePickerRef}
+                  type="date"
+                  tabIndex={-1}
+                  value={normalizeDateForApi(watch('departureDate')) || ''}
+                  onChange={(e) =>
+                    setValue('departureDate', formatIsoToDisplayDate(e.target.value), {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    })
+                  }
+                  className="pointer-events-none absolute h-0 w-0 opacity-0"
+                  aria-hidden="true"
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  onClick={() => openNativeDatePicker(departureDatePickerRef)}
+                  aria-label="Open departure date calendar"
+                >
+                  <CalendarDays className="h-4 w-4" />
+                </button>
+              </div>
             </Field>
             <Field label="Departure Time" error={errors.departureTime}>
               <Input type="time" {...register('departureTime')} />
@@ -536,6 +789,7 @@ export default function Registration() {
               options={NON_ATTENDING_TYPE}
               selectedValue={selectedAccommodation}
               onSelect={selectAccommodation}
+              disabled={isBrahmachari}
               error={errors.nonAttendingType}
             />
             <div className="space-y-2">
@@ -545,6 +799,7 @@ export default function Registration() {
                 options={DORMITORY_OPTION ? [DORMITORY_OPTION] : []}
                 selectedValue={selectedAccommodation}
                 onSelect={selectAccommodation}
+                disabled={isBrahmachari}
                 error={errors.sharedAccommodation}
               />
               <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
@@ -564,6 +819,7 @@ export default function Registration() {
               options={SHARED_ACCOMMODATION_PER_DEVOTEE}
               selectedValue={selectedAccommodation}
               onSelect={selectAccommodation}
+              disabled={isBrahmachari}
               error={errors.sharedAccommodation}
             />
 
@@ -573,20 +829,24 @@ export default function Registration() {
               options={FAMILY_ACCOMMODATION}
               selectedValue={selectedAccommodation}
               onSelect={selectAccommodation}
+              disabled={isBrahmachari}
               error={errors.familyAccommodation}
             />
             {familyAccommodation && (
               <div className="space-y-2 rounded-md border border-amber-200 bg-amber-50/80 px-4 py-3 shadow-sm">
-                <label className="flex items-center gap-3 text-sm text-amber-950">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 rounded border border-slate-400 bg-white text-amber-600 accent-amber-600 focus:ring-2 focus:ring-amber-300"
-                    {...register('extraFamilyDevotee')}
-                  />
-                  <span className="font-medium">Add extra devotee - ₹ 3500/-</span>
-                </label>
+                {EXTRA_CHARGE_OPTIONS.map((opt) => (
+                  <label key={opt.value} className="flex items-center gap-3 text-sm text-amber-950">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border border-slate-400 bg-white text-amber-600 accent-amber-600 focus:ring-2 focus:ring-amber-300"
+                      value={opt.value}
+                      {...register('extraCharges')}
+                    />
+                    <span className="font-medium">{opt.label}</span>
+                  </label>
+                ))}
                 <p className="text-xs text-amber-700">
-                  Add one extra devotee in the same family accommodation room. This is an optional extra charge for one additional devotee.
+                  Select any additional charges for extra devotees or children over 12 years.
                 </p>
               </div>
             )}
@@ -721,29 +981,71 @@ export default function Registration() {
                 </span>
               </div>
               <div className="grid gap-3">
-                {DONATION_ITEMS.map((item) => (
-                  <label
-                    key={item.id}
-                    className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3 transition hover:border-slate-300"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="font-semibold">{item.service}</p>
-                        <p className="text-sm text-muted-foreground">{item.note}</p>
+                {DONATION_ITEMS.map((item) => {
+                  const isCustomDonation = item.id === 'vyaspuja-dakshina';
+                  const isCustomPurposeDonation = item.id === 'custom-purpose-donation';
+                  const isSelected = (selectedDonations || []).includes(item.id);
+                  const allowedForBrahmachari = ['vyaspuja-dakshina', 'custom-purpose-donation'];
+                  const donationDisabled = isBrahmachari && !allowedForBrahmachari.includes(item.id);
+
+                  return (
+                    <label
+                      key={item.id}
+                      className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3 transition hover:border-slate-300"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <p className="font-semibold">{item.service}</p>
+                          <p className="text-sm text-muted-foreground">{item.note}</p>
+                        </div>
+                        <span className="text-sm font-semibold">{item.amount}</span>
                       </div>
-                      <span className="text-sm font-semibold">{item.amount}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        value={item.id}
-                        {...register('selectedDonations')}
-                        className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
-                      />
-                      <span className="text-sm">Add this donation</span>
-                    </div>
-                  </label>
-                ))}
+                      <div className="flex flex-wrap items-center gap-3">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            value={item.id}
+                            {...register('selectedDonations')}
+                            className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
+                            disabled={donationDisabled}
+                          />
+                          <span className="text-sm">Add this donation</span>
+                        </div>
+                        {isCustomDonation && isSelected && (
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="number"
+                              min="1"
+                              step="1"
+                              placeholder="Enter amount"
+                              className="h-8 w-32"
+                              {...register('customDonationAmount')}
+                            />
+                            <span className="text-xs text-muted-foreground">₹</span>
+                          </div>
+                        )}
+                        {isCustomPurposeDonation && isSelected && (
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Input
+                              placeholder="Enter purpose"
+                              className="h-8 w-40"
+                              {...register('customDonationPurpose')}
+                            />
+                            <Input
+                              type="number"
+                              min="1"
+                              step="1"
+                              placeholder="Enter amount"
+                              className="h-8 w-32"
+                              {...register('customDonationPurposeAmount')}
+                            />
+                            <span className="text-xs text-muted-foreground">₹</span>
+                          </div>
+                        )}
+                      </div>
+                    </label>
+                  );
+                })}
               </div>
             </div>
             <div className="grid gap-4 lg:grid-cols-[1.5fr_auto] lg:items-end">
@@ -781,7 +1083,7 @@ export default function Registration() {
                 placeholder="Name as it appears in your bank account"
               />
             </Field>
-            <Field label="Payment Screenshot" required error={errors.paymentScreenshot}>
+            <Field label="Payment Screenshot" error={errors.paymentScreenshot}>
               <Input
                 type="file"
                 accept="image/*"

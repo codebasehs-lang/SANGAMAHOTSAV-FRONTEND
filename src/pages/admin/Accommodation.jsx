@@ -9,7 +9,6 @@ import {
   NON_ATTENDING_TYPE,
   SHARED_ACCOMMODATION,
   FAMILY_ACCOMMODATION,
-  ADDITIONAL_FAMILY_ACCOMMODATION,
 } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,16 +33,11 @@ const EMPTY = {
   hotelAddress: '',
   roomNumber: '',
   hotelMapLink: '',
-  additionalHotelName: '',
-  additionalHotelAddress: '',
-  additionalRoomNumber: '',
-  additionalHotelMapLink: '',
 };
 
 const ROOM_TYPE_OPTIONS = [
   ...SHARED_ACCOMMODATION,
   ...FAMILY_ACCOMMODATION,
-  ...ADDITIONAL_FAMILY_ACCOMMODATION,
   ...NON_ATTENDING_TYPE,
 ];
 
@@ -70,7 +64,6 @@ export default function Accommodation() {
   const [form, setForm] = useState(EMPTY);
   const [hotels, setHotels] = useState([]);
   const [selectedHotel, setSelectedHotel] = useState('');
-  const [selectedAdditionalHotel, setSelectedAdditionalHotel] = useState('');
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
 
@@ -105,7 +98,6 @@ export default function Accommodation() {
   function openAssign(reg) {
     setActive(reg);
     setSelectedHotel('');
-    setSelectedAdditionalHotel('');
     setForm(
       reg.assignment
         ? {
@@ -113,10 +105,6 @@ export default function Accommodation() {
             hotelAddress: reg.assignment.hotelAddress || '',
             roomNumber: reg.assignment.roomNumber || '',
             hotelMapLink: reg.assignment.hotelMapLink || '',
-            additionalHotelName: reg.assignment.additionalHotelName || '',
-            additionalHotelAddress: reg.assignment.additionalHotelAddress || '',
-            additionalRoomNumber: reg.assignment.additionalRoomNumber || '',
-            additionalHotelMapLink: reg.assignment.additionalHotelMapLink || '',
           }
         : EMPTY
     );
@@ -132,19 +120,6 @@ export default function Accommodation() {
         hotelName: hotel.hotelName || '',
         hotelAddress: hotel.hotelAddress || '',
         hotelMapLink: hotel.hotelMapLink || '',
-      }));
-    }
-  }
-
-  function pickAdditionalHotel(hotelId) {
-    setSelectedAdditionalHotel(hotelId);
-    const hotel = hotels.find((h) => String(h.id) === String(hotelId));
-    if (hotel) {
-      setForm((prev) => ({
-        ...prev,
-        additionalHotelName: hotel.hotelName || '',
-        additionalHotelAddress: hotel.hotelAddress || '',
-        additionalHotelMapLink: hotel.hotelMapLink || '',
       }));
     }
   }
@@ -231,11 +206,6 @@ export default function Accommodation() {
                       {r.assignment ? (
                         <div className="space-y-0.5 text-sm">
                           <div>{r.assignment.hotelName} / {r.assignment.roomNumber}</div>
-                          {r.assignment.additionalRoomNumber && (
-                            <div className="text-xs text-muted-foreground">
-                              Addl: {r.assignment.additionalHotelName} / {r.assignment.additionalRoomNumber}
-                            </div>
-                          )}
                         </div>
                       ) : '-'}
                     </TableCell>
@@ -326,65 +296,6 @@ export default function Accommodation() {
               placeholder="https://maps.google.com/..."
             />
           </div>
-
-          {/* ── Additional Family Room (only when devotee selected it) ── */}
-          {active?.additionalFamilyAccommodation && (
-            <>
-              <div className="mt-2 border-t pt-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Additional Family Room
-                </p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {ADDITIONAL_FAMILY_ACCOMMODATION.find(
-                    (o) => o.value === active.additionalFamilyAccommodation
-                  )?.label || active.additionalFamilyAccommodation}
-                </p>
-              </div>
-              {hotels.length > 0 && (
-                <div className="space-y-1.5">
-                  <Label>Select Hotel</Label>
-                  <Select
-                    options={hotels.map((h) => ({
-                      value: String(h.id),
-                      label: h.hotelName,
-                    }))}
-                    placeholder="Choose a hotel..."
-                    value={selectedAdditionalHotel}
-                    onChange={(e) => pickAdditionalHotel(e.target.value)}
-                  />
-                </div>
-              )}
-              <div className="space-y-1.5">
-                <Label>Hotel Name</Label>
-                <Input
-                  value={form.additionalHotelName}
-                  onChange={(e) => setForm({ ...form, additionalHotelName: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Hotel Address</Label>
-                <Input
-                  value={form.additionalHotelAddress}
-                  onChange={(e) => setForm({ ...form, additionalHotelAddress: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Room Number</Label>
-                <Input
-                  value={form.additionalRoomNumber}
-                  onChange={(e) => setForm({ ...form, additionalRoomNumber: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Hotel Google Map Link</Label>
-                <Input
-                  value={form.additionalHotelMapLink}
-                  onChange={(e) => setForm({ ...form, additionalHotelMapLink: e.target.value })}
-                  placeholder="https://maps.google.com/..."
-                />
-              </div>
-            </>
-          )}
 
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => setActive(null)}>

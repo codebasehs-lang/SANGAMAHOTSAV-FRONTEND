@@ -4,7 +4,7 @@ import { ArrowLeft, X } from 'lucide-react';
 
 import api, { getErrorMessage } from '@/lib/api';
 import { humanize, formatDate } from '@/lib/utils';
-import { DONATION_ITEMS } from '@/lib/constants';
+import { DONATION_ITEMS, EXTRA_CHARGE_OPTIONS } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -93,11 +93,30 @@ export default function RegistrationDetails() {
     ? reg.donationItems
         .map((d) => {
           const meta = DONATION_ITEMS.find((i) => i.id === d.id);
-          const label = meta ? meta.service : d.id;
-          return `${label} – ₹ ${Number(d.amount).toLocaleString()}`;
+          const label = meta
+            ? meta.service
+            : d.id === 'vyaspuja-dakshina'
+              ? 'Vyaspuja Dakshina'
+              : d.id;
+          const purposeSuffix = d.purpose ? ` (${d.purpose})` : '';
+          return `${label}${purposeSuffix} – ₹ ${Number(d.amount).toLocaleString()}`;
         })
         .join(', ')
     : '';
+  const extraChargeEntries = Array.isArray(reg.extraCharges) ? reg.extraCharges : [];
+  const extraChargeRows = extraChargeEntries
+    .map((code) => {
+      const option = EXTRA_CHARGE_OPTIONS.find((opt) => opt.value === code);
+      return option ? `${option.label} – ₹ ${option.amount.toLocaleString()}` : code;
+    })
+    .join(', ');
+  const extraChargeTotal = extraChargeEntries.reduce((sum, code) => {
+    const option = EXTRA_CHARGE_OPTIONS.find((opt) => opt.value === code);
+    return sum + (option?.amount || 0);
+  }, 0);
+  const extraChargeLabel = extraChargeEntries.length
+    ? `${extraChargeRows} (Total: ₹ ${extraChargeTotal.toLocaleString()})`
+    : '-';
 
   return (
     <div className="space-y-4">
@@ -143,7 +162,7 @@ export default function RegistrationDetails() {
               <Row label="Non Attending" value={humanize(reg.nonAttendingType)} />
               <Row label="Shared Accom." value={humanize(reg.sharedAccommodation)} />
               <Row label="Family Accom." value={humanize(reg.familyAccommodation)} />
-              <Row label="Additional Family Accom." value={humanize(reg.additionalFamilyAccommodation)} />
+              <Row label="Extra Charges" value={extraChargeLabel} />
               <Row label="Journey Prasad" value={reg.needJourneyPrasad ? 'Yes' : 'No'} />
               <Row label="Own 4-Wheeler" value={reg.ownFourWheeler ? 'Yes' : 'No'} />
             </dl>

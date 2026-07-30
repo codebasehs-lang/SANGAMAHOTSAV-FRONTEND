@@ -10,7 +10,7 @@ import {
   NON_ATTENDING_TYPE,
   SHARED_ACCOMMODATION,
   FAMILY_ACCOMMODATION,
-  ADDITIONAL_FAMILY_ACCOMMODATION,
+  EXTRA_CHARGE_OPTIONS,
 } from '@/lib/constants';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -77,16 +77,19 @@ const ALL_ACCOM = [
   ...NON_ATTENDING_TYPE,
   ...SHARED_ACCOMMODATION,
   ...FAMILY_ACCOMMODATION,
-  ...ADDITIONAL_FAMILY_ACCOMMODATION,
+  ...(typeof ADDITIONAL_FAMILY_ACCOMMODATION !== 'undefined' ? ADDITIONAL_FAMILY_ACCOMMODATION : []),
 ];
 
 function findLabel(value) {
   return ALL_ACCOM.find((o) => o.value === value)?.label || null;
 }
 
-function parseAmount(label) {
-  const match = label?.match(/₹\s*([\d,]+)/);
-  return match ? parseInt(match[1].replace(',', ''), 10) : 0;
+function getExtraChargeTotal(reg) {
+  const entries = Array.isArray(reg.extraCharges) ? reg.extraCharges : [];
+  return entries.reduce((sum, code) => {
+    const option = EXTRA_CHARGE_OPTIONS.find((opt) => opt.value === code);
+    return sum + (option?.amount || 0);
+  }, 0);
 }
 
 function AccommodationCell({ reg }) {
@@ -94,25 +97,20 @@ function AccommodationCell({ reg }) {
     findLabel(reg.nonAttendingType) ||
     findLabel(reg.sharedAccommodation) ||
     findLabel(reg.familyAccommodation);
-  const extra = findLabel(reg.additionalFamilyAccommodation);
+  const extraTotal = getExtraChargeTotal(reg);
+  const extraSelected = extraTotal > 0;
+  const totalExtra = extraTotal;
 
-  if (!primary && !extra) return <span className="text-muted-foreground">-</span>;
-
-  const total = parseAmount(primary) + parseAmount(extra);
+  if (!primary && !extraSelected) return <span className="text-muted-foreground">-</span>;
 
   return (
     <div className="space-y-0.5">
       {primary && (
         <div className="text-xs font-medium leading-snug">{primary}</div>
       )}
-      {extra && (
+      {extraSelected && (
         <div className="text-xs text-muted-foreground leading-snug">
-          + {extra}
-        </div>
-      )}
-      {extra && primary && (
-        <div className="text-xs font-semibold text-primary leading-snug">
-          Total: ₹ {total.toLocaleString()}/-
+          + ₹ {totalExtra.toLocaleString()}/-
         </div>
       )}
     </div>
