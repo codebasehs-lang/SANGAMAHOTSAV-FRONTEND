@@ -29,9 +29,12 @@ export default function Login() {
   const location = useLocation();
   const [serverError, setServerError] = useState('');
 
-  const rememberedLogin = typeof window !== 'undefined'
-    ? JSON.parse(localStorage.getItem('sangam_admin_credentials') || 'null')
-    : null;
+  // Read once at mount — parsing inside render causes a new object each cycle
+  const rememberedLogin = useState(() =>
+    typeof window !== 'undefined'
+      ? JSON.parse(localStorage.getItem('sangam_admin_credentials') || 'null')
+      : null
+  )[0];
 
   const {
     register,
@@ -51,7 +54,8 @@ export default function Login() {
     if (rememberedLogin) {
       reset(rememberedLogin);
     }
-  }, [rememberedLogin, reset]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function onSubmit(values) {
     setServerError('');

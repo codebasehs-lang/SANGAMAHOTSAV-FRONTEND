@@ -29,9 +29,15 @@ import {
 import StatusBadge from '@/components/StatusBadge';
 import { Spinner } from '@/components/Spinner';
 
+const MESSAGE_CHANNEL_OPTIONS = [
+  { value: 'WHATSAPP', label: 'WhatsApp' },
+  { value: 'SMS', label: 'SMS' },
+];
+
 export default function SmsCampaigns() {
   const { isViewer } = useAuth();
   const [type, setType] = useState('ACCOMMODATION');
+  const [channel, setChannel] = useState('WHATSAPP');
   const [message, setMessage] = useState('');
   const [audience, setAudience] = useState('ALL'); // 'ALL' | 'SELECTED'
   const [selected, setSelected] = useState([]); // [{ id, name, mobileNumber }]
@@ -102,7 +108,7 @@ export default function SmsCampaigns() {
     setError('');
     setResult(null);
     try {
-      const payload = { type };
+      const payload = { type, channel };
       if (type === 'CUSTOM') payload.message = message;
       if (audience === 'SELECTED')
         payload.registrationIds = selected.map((r) => r.id);
@@ -133,15 +139,23 @@ export default function SmsCampaigns() {
       {!isViewer ? (
         <Card>
           <CardHeader>
-            <CardTitle>Send Bulk SMS</CardTitle>
+            <CardTitle>Send Bulk Message</CardTitle>
             <CardDescription>
               Send to all eligible devotees, or search and pick specific
-              recipients. Accommodation SMS is sent only to devotees with an
+              recipients. Accommodation messages are sent only to devotees with an
               assigned room.
             </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap gap-4">
+            <div className="min-w-[220px] space-y-1.5">
+              <Label>Channel</Label>
+              <Select
+                options={MESSAGE_CHANNEL_OPTIONS}
+                value={channel}
+                onChange={(e) => setChannel(e.target.value)}
+              />
+            </div>
             <div className="min-w-[240px] space-y-1.5">
               <Label>Campaign Type</Label>
               <Select
@@ -257,7 +271,7 @@ export default function SmsCampaigns() {
       </Card>
       ) : (
         <div className="rounded-md border bg-yellow-50 p-4 text-sm text-yellow-700">
-          You have view-only access. Sending SMS campaigns is restricted to Admins.
+          You have view-only access. Sending campaigns is restricted to Admins.
         </div>
       )}
 
@@ -268,7 +282,7 @@ export default function SmsCampaigns() {
       )}
       {result && (
         <div className="rounded-md border border-green-500/50 bg-green-50 p-3 text-sm text-green-800">
-          Campaign #{result.campaignId} processed — {result.sentCount} sent,{' '}
+          {result.channel === 'WHATSAPP' ? 'WhatsApp' : 'SMS'} campaign #{result.campaignId} processed - {result.sentCount} sent,{' '}
           {result.failedCount} failed of {result.totalRecipients}.
         </div>
       )}
@@ -293,26 +307,28 @@ export default function SmsCampaigns() {
               <TableHeader>
                 <TableRow>
                   <TableHead>ID</TableHead>
+                  <TableHead className="hidden md:table-cell">Channel</TableHead>
                   <TableHead>Type</TableHead>
-                  <TableHead>Recipients</TableHead>
+                  <TableHead className="hidden sm:table-cell">Recipients</TableHead>
                   <TableHead>Sent</TableHead>
-                  <TableHead>Failed</TableHead>
+                  <TableHead className="hidden sm:table-cell">Failed</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Date</TableHead>
+                  <TableHead className="hidden md:table-cell">Date</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {campaigns.map((c) => (
                   <TableRow key={c.id}>
                     <TableCell>#{c.id}</TableCell>
+                    <TableCell className="hidden md:table-cell">{c.channel || 'SMS'}</TableCell>
                     <TableCell>{humanize(c.type)}</TableCell>
-                    <TableCell>{c.totalRecipients}</TableCell>
+                    <TableCell className="hidden sm:table-cell">{c.totalRecipients}</TableCell>
                     <TableCell>{c.sentCount}</TableCell>
-                    <TableCell>{c.failedCount}</TableCell>
+                    <TableCell className="hidden sm:table-cell">{c.failedCount}</TableCell>
                     <TableCell>
                       <StatusBadge status={c.status} />
                     </TableCell>
-                    <TableCell>{formatDate(c.createdAt)}</TableCell>
+                    <TableCell className="hidden md:table-cell">{formatDate(c.createdAt)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

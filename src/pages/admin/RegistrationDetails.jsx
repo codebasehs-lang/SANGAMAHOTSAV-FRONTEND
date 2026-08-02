@@ -50,9 +50,9 @@ function ImageModal({ src, onClose }) {
 
 function Row({ label, value }) {
   return (
-    <div className="grid grid-cols-3 gap-2 border-b py-2 text-sm last:border-0">
+    <div className="flex flex-col gap-0.5 border-b py-2 text-sm last:border-0 sm:grid sm:grid-cols-3 sm:gap-2">
       <dt className="text-muted-foreground">{label}</dt>
-      <dd className="col-span-2 font-medium">{value || '-'}</dd>
+      <dd className="font-medium sm:col-span-2">{value || '-'}</dd>
     </div>
   );
 }
@@ -127,7 +127,7 @@ export default function RegistrationDetails() {
         <ArrowLeft className="h-4 w-4" /> Back
       </Button>
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">{reg.name}</h1>
         <StatusBadge status={reg.accommodationStatus} />
       </div>
@@ -188,9 +188,9 @@ export default function RegistrationDetails() {
               <Row label="Amount Paid" value={reg.amountPaid} />
               <Row label="Payment Reference ID" value={reg.paymentReferenceId} />
               <Row label="Payee Account Name" value={reg.payeeAccountName} />
-              <div className="grid grid-cols-3 gap-2 border-b py-2 text-sm last:border-0">
+              <div className="flex flex-col gap-0.5 border-b py-2 text-sm last:border-0 sm:grid sm:grid-cols-3 sm:gap-2">
                 <dt className="text-muted-foreground">Payment Status</dt>
-                <dd className="col-span-2 font-medium">
+                <dd className="font-medium sm:col-span-2">
                   {reg.paymentStatus === 'APPROVED' ? (
                     <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">
                       ✓ Approved
@@ -203,9 +203,9 @@ export default function RegistrationDetails() {
                 </dd>
               </div>
               {reg.paymentScreenshot && (
-                <div className="grid grid-cols-3 gap-2 border-b py-2 text-sm last:border-0">
+                <div className="flex flex-col gap-0.5 border-b py-2 text-sm last:border-0 sm:grid sm:grid-cols-3 sm:gap-2">
                   <dt className="text-muted-foreground">Payment Screenshot</dt>
-                  <dd className="col-span-2">
+                  <dd className="sm:col-span-2">
                     <button
                       type="button"
                       onClick={() => setLightboxSrc(reg.paymentScreenshot)}
@@ -239,7 +239,7 @@ export default function RegistrationDetails() {
                 <Row label="Status" value={humanize(reg.assignment.status)} />
                 {reg.assignment.additionalRoomNumber && (
                   <>
-                    <div className="col-span-3 mt-2 border-t pt-2">
+                    <div className="col-span-full mt-2 border-t pt-2">
                       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                         Additional Family Room
                       </p>
