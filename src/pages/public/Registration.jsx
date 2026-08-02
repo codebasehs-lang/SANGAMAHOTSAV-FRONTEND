@@ -1106,7 +1106,7 @@ export default function Registration() {
             <div className="space-y-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-semibold">SANGA MAHOTSAVA / SEVA OPPORTUNITIES FOR APRIL – 2026</p>
+                  <p className="text-sm font-semibold">SANGA MAHOTSAVA / SEVA OPPORTUNITIES FOR OCT – 2026</p>
                   <p className="text-xs text-muted-foreground">Select any donation items to add to your registration amount.</p>
                 </div>
                 <span className="rounded-full bg-emerald-100 px-3 py-1 text-sm font-medium text-emerald-800">

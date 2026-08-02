@@ -310,7 +310,7 @@ export default function Home() {
           <span className="eyebrow-leaf">🙏</span>
           <h2 id="donation-services-title">SANGA MAHOTSAVA</h2>
           <p>
-            SEVA  OPPORTUNITIES FOR APRIL – 2026
+            SEVA  OPPORTUNITIES
           </p>
         </div>
 
