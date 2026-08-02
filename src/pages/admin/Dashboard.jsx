@@ -54,7 +54,7 @@ export default function Dashboard() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {/* Total Registrations — with Disciple / Non-Disciple breakdown */}
+        {/* Total Registrations — with full breakdown */}
         <Card>
           <CardContent className="flex items-center gap-4 pt-6">
             <div className="rounded-lg p-3 text-blue-600 bg-blue-100">
@@ -63,19 +63,12 @@ export default function Dashboard() {
             <div>
               <p className="text-2xl font-bold">{summary?.totalRegistrations ?? 0}</p>
               <p className="text-sm text-muted-foreground">Total Registrations</p>
-              <div className="mt-1 flex gap-3 text-xs text-muted-foreground">
-                <span>
-                  Disciple:{' '}
-                  <span className="font-semibold text-foreground">
-                    {summary?.discipleRegistrations ?? 0}
-                  </span>
-                </span>
-                <span>
-                  Non-Disciple:{' '}
-                  <span className="font-semibold text-foreground">
-                    {summary?.nonDiscipleRegistrations ?? 0}
-                  </span>
-                </span>
+              <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                <span>Disciple: <span className="font-semibold text-foreground">{summary?.discipleRegistrations ?? 0}</span></span>
+                <span>Non-Disciple: <span className="font-semibold text-foreground">{summary?.nonDiscipleRegistrations ?? 0}</span></span>
+                <span>Attendees (incl. family): <span className="font-semibold text-foreground">{summary?.totalAttendees ?? 0}</span></span>
+                <span>Adults: <span className="font-semibold text-foreground">{summary?.totalAdults ?? 0}</span></span>
+                <span>Children: <span className="font-semibold text-foreground">{summary?.totalChildren ?? 0}</span></span>
               </div>
             </div>
           </CardContent>

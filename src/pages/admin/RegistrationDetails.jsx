@@ -48,6 +48,9 @@ function ImageModal({ src, onClose }) {
   );
 }
 
+const GENDER_LABEL = { MALE: 'Prabhuji', FEMALE: 'Mataji' };
+function genderLabel(g) { return GENDER_LABEL[g] || humanize(g); }
+
 function Row({ label, value }) {
   return (
     <div className="flex flex-col gap-0.5 border-b py-2 text-sm last:border-0 sm:grid sm:grid-cols-3 sm:gap-2">
@@ -87,7 +90,7 @@ export default function RegistrationDetails() {
     ? reg.services.map(humanize).join(', ')
     : '';
   const family = Array.isArray(reg.familyMembers)
-    ? reg.familyMembers.map((m) => `${m.name} (${m.age})`).join(', ')
+    ? reg.familyMembers.map((m) => `${m.name} (${m.age}${m.gender ? ', ' + genderLabel(m.gender) : ''})`).join(', ')
     : '';
   const donations = Array.isArray(reg.donationItems)
     ? reg.donationItems
@@ -141,6 +144,7 @@ export default function RegistrationDetails() {
             <dl>
               <Row label="Name" value={reg.name} />
               <Row label="Age" value={reg.age} />
+              <Row label="Gender" value={genderLabel(reg.gender)} />
               {/* <Row label="Initiated Name" value={reg.initiatedName} /> */}
               <Row label="Category" value={humanize(reg.devoteeCategory)} />
               <Row label="Mobile" value={reg.mobileNumber} />

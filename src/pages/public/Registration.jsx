@@ -95,11 +95,14 @@ const schema = z.object({
   age: z.coerce.number().min(0).max(120),
   initiatedName: z.string().optional(),
   devoteeCategory: z.enum(['DISCIPLE', 'NON_DISCIPLE', 'BRAHMACHARI']),
+  gender: z.enum(['MALE', 'FEMALE'], { required_error: 'Gender is required' }),
   familyMembers: z
     .array(
       z.object({
         name: z.string().optional(),
         age: z.coerce.number().min(0).max(120).optional(),
+        devoteeCategory: z.string().min(1, 'Category is required'),
+        gender: z.string().min(1, 'Gender is required'),
       })
     )
     .optional(),
@@ -176,6 +179,7 @@ export default function Registration() {
   const [showErrorToast, setShowErrorToast] = useState(false);
   const [screenshotPreview, setScreenshotPreview] = useState(null);
   const [showQrModal, setShowQrModal] = useState(false);
+  const [showMapModal, setShowMapModal] = useState(false);
   const arrivalDatePickerRef = useRef(null);
   const departureDatePickerRef = useRef(null);
 
@@ -220,6 +224,8 @@ export default function Registration() {
   const familyAccommodation = watch('familyAccommodation');
   const isBrahmachari = watch('devoteeCategory') === 'BRAHMACHARI';
   const extraCharges = watch('extraCharges') || [];
+  const watchedAge = watch('age');
+  const watchedFamilyMembers = watch('familyMembers') || [];
 
   const selectedAccommodation =
     nonAttendingType || sharedAccommodation || familyAccommodation || '';
@@ -231,6 +237,56 @@ export default function Registration() {
     (sum, opt) => (extraCharges.includes(opt.value) ? sum + opt.amount : sum),
     0
   );
+
+  // Computes charge for a single person by age
+  function nonAttendingCharge(age) {
+    const a = Number(age) || 0;
+    if (a >= 18) return 3500;
+    if (a >= 12) return 1000;
+    return 0;
+  }
+
+  // Comprehensive breakdown of all amount components shown below the total field
+  const nonAttendingBreakdown = (() => {
+    const parts = [];
+
+    // Accommodation part
+    if (nonAttendingType === 'ATTENDING_NOT_STAYING') {
+      const mainAge = Number(watchedAge) || 0;
+      const adults = (mainAge >= 18 ? 1 : 0) +
+        watchedFamilyMembers.filter((m) => m.name && Number(m.age) >= 18).length;
+      const children = (mainAge >= 12 && mainAge < 18 ? 1 : 0) +
+        watchedFamilyMembers.filter((m) => m.name && Number(m.age) >= 12 && Number(m.age) < 18).length;
+      if (adults > 0) parts.push(`${adults} adult${adults !== 1 ? 's' : ''} × ₹3500`);
+      if (children > 0) parts.push(`${children} child${children !== 1 ? 'ren' : ''} (12-17) × ₹1000`);
+    } else {
+      const PRICES = { DORMITORY: 5000, NON_AC_SHARING: 6000, AC_SHARING: 7000, DELUXE_AC: 18000, PREMIUM_AC: 19500 };
+      const accom = nonAttendingType || sharedAccommodation || familyAccommodation;
+      if (accom && PRICES[accom]) parts.push(`Accommodation ₹${PRICES[accom].toLocaleString('en-IN')}`);
+    }
+
+    // Donation items
+    for (const id of selectedDonations) {
+      if (id === 'vyaspuja-dakshina') {
+        const amt = Number(customDonationAmount) || 0;
+        if (amt > 0) parts.push(`Vyaspuja Dakshina ₹${amt.toLocaleString('en-IN')}`);
+      } else if (id === 'custom-purpose-donation') {
+        const amt = Number(customDonationPurposeAmount) || 0;
+        const purpose = (watch('customDonationPurpose') || '').trim();
+        if (amt > 0) parts.push(`${purpose || 'Purpose'} ₹${amt.toLocaleString('en-IN')}`);
+      } else {
+        const item = DONATION_ITEMS.find((d) => d.id === id);
+        if (item) parts.push(`${item.service} ₹${item.value.toLocaleString('en-IN')}`);
+      }
+    }
+
+    // Extra charges
+    for (const opt of EXTRA_CHARGE_OPTIONS) {
+      if (extraCharges.includes(opt.value)) parts.push(`${opt.label} ₹${opt.amount.toLocaleString('en-IN')}`);
+    }
+
+    return parts.length ? parts.join(' + ') : null;
+  })();
 
   function getDonationTotal(selectedIds, customAmount, customPurposeAmountValue) {
     return DONATION_ITEMS.reduce((sum, item) => {
@@ -270,7 +326,15 @@ export default function Registration() {
 
     let total = 0;
 
-    if (nonAttendingType) {
+    if (nonAttendingType === 'ATTENDING_NOT_STAYING') {
+      // Age-based: >=18 → ₹3500, 12-17 → ₹1000, <12 → free
+      const mainAge = Number(watchedAge) || 0;
+      total += nonAttendingCharge(mainAge);
+      for (const m of watchedFamilyMembers) {
+        if (m.name) total += nonAttendingCharge(m.age);
+      }
+      if (total === 0) total = 3500; // minimum fallback
+    } else if (nonAttendingType) {
       total = PRICES[nonAttendingType] ?? 0;
     } else if (sharedAccommodation) {
       total = PRICES[sharedAccommodation] ?? 0;
@@ -306,6 +370,8 @@ export default function Registration() {
     customDonationAmount,
     customDonationPurposeAmount,
     extraChargesTotal,
+    watchedAge,
+    watchedFamilyMembers,
     setValue,
   ]);
 
@@ -514,10 +580,14 @@ export default function Registration() {
           {EVENT_INFO.startDate} ({EVENT_INFO.startTime}) &ndash;{' '}
           {EVENT_INFO.endDate} ({EVENT_INFO.endTime})
         </p>
-        <p className="mt-2 inline-flex items-center justify-center gap-2 text-sm font-medium text-sky-700">
+        <button
+          type="button"
+          onClick={() => setShowMapModal(true)}
+          className="mt-2 inline-flex items-center justify-center gap-2 text-sm font-medium text-sky-700 rounded border border-sky-200 px-3 py-1 hover:bg-sky-50 transition-colors"
+        >
           <MapPin className="h-4 w-4 text-sky-700" />
           <span>{EVENT_INFO.venue}</span>
-        </p>
+        </button>
       </div>
 
       {serverError && (
@@ -557,6 +627,16 @@ export default function Registration() {
             <Field label="Facilitator Name" error={errors.facilitatorName}>
               <Input {...register('facilitatorName')} placeholder="Name of the facilitator (optional)" />
             </Field>
+            <Field label="Gender" required error={errors.gender}>
+              <select
+                {...register('gender')}
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                <option value="">Select</option>
+                <option value="MALE">Prabhuji</option>
+                <option value="FEMALE">Mataji</option>
+              </select>
+            </Field>
           </CardContent>
         </Card>
 
@@ -571,7 +651,7 @@ export default function Registration() {
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => append({ name: '', age: '' })}
+              onClick={() => append({ name: '', age: '', devoteeCategory: '', gender: '' })}
               disabled={isBrahmachari}
             >
               <Plus className="h-4 w-4" /> Add
@@ -584,24 +664,50 @@ export default function Registration() {
               </p>
             )}
             {fields.map((f, i) => (
-              <div key={f.id} className="flex items-end gap-2">
-                <div className="flex-1">
+              <div key={f.id} className="grid grid-cols-1 gap-2 rounded-md border p-3 sm:grid-cols-[1fr_5rem_8rem_8rem_auto]">
+                <div>
                   <Label className="text-xs">Name</Label>
                   <Input {...register(`familyMembers.${i}.name`)} disabled={isBrahmachari} />
                 </div>
-                <div className="w-24">
+                <div>
                   <Label className="text-xs">Age</Label>
                   <Input type="number" {...register(`familyMembers.${i}.age`)} disabled={isBrahmachari} />
                 </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => remove(i)}
-                  disabled={isBrahmachari}
-                >
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
+                <div>
+                  <Label className="text-xs">Category</Label>
+                  <select
+                    {...register(`familyMembers.${i}.devoteeCategory`)}
+                    disabled={isBrahmachari}
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
+                  >
+                    <option value="">Select</option>
+                    <option value="DISCIPLE">Disciple</option>
+                    <option value="NON_DISCIPLE">Non-Disciple</option>
+                  </select>
+                </div>
+                <div>
+                  <Label className="text-xs">Gender</Label>
+                  <select
+                    {...register(`familyMembers.${i}.gender`)}
+                    disabled={isBrahmachari}
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
+                  >
+                    <option value="">Select</option>
+                    <option value="MALE">Prabhuji</option>
+                    <option value="FEMALE">Mataji</option>
+                  </select>
+                </div>
+                <div className="flex items-end">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => remove(i)}
+                    disabled={isBrahmachari}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
               </div>
             ))}
           </CardContent>
@@ -937,6 +1043,33 @@ export default function Registration() {
             </div>
 
             <Modal
+              open={showMapModal}
+              onClose={() => setShowMapModal(false)}
+              title={EVENT_INFO.venue}
+              className="max-w-2xl"
+            >
+              <div className="flex flex-col gap-3">
+                <iframe
+                  title="Venue Location"
+                  src={`https://maps.google.com/maps?q=${encodeURIComponent(EVENT_INFO.venue)}&output=embed`}
+                  className="w-full rounded border"
+                  style={{ height: '400px' }}
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
+                <a
+                  href="https://maps.app.goo.gl/V2PUK7jpneTwQ5t8A"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-sm text-sky-700 hover:underline"
+                >
+                  <MapPin className="h-4 w-4" />
+                  Open in Google Maps
+                </a>
+              </div>
+            </Modal>
+
+            <Modal
               open={showQrModal}
               onClose={() => setShowQrModal(false)}
               title="Scan and Pay"
@@ -1048,25 +1181,34 @@ export default function Registration() {
                 })}
               </div>
             </div>
-            <div className="grid gap-4 lg:grid-cols-[1.5fr_auto] lg:items-end">
-              <Field label="Total Amount to be Paid" required error={errors.amountPaid}>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">
+                Total Amount to be Paid <span className="text-destructive">*</span>
+              </label>
+              <div className="flex gap-3">
                 <Input
                   type="number"
                   step="0.01"
                   {...register('amountPaid')}
-                  className="border-amber-300 bg-amber-50 text-amber-900 focus:border-amber-500 focus:ring-amber-200"
+                  className="flex-1 border-amber-300 bg-amber-50 text-amber-900 focus:border-amber-500 focus:ring-amber-200"
                 />
-              </Field>
-              <div className="flex items-end">
                 <Button
                   type="button"
                   variant="secondary"
                   onClick={() => setShowQrModal(true)}
-                  className="w-full sm:w-auto bg-gradient-to-r from-orange-500 to-amber-400 text-white shadow-lg shadow-amber-200/60 hover:from-orange-600 hover:to-amber-500"
+                  className="shrink-0 bg-gradient-to-r from-orange-500 to-amber-400 text-white shadow-lg shadow-amber-200/60 hover:from-orange-600 hover:to-amber-500"
                 >
                   Scan and Pay
                 </Button>
               </div>
+              {nonAttendingBreakdown && (
+                <p className="text-xs font-bold text-red-600">
+                  Breakdown: {nonAttendingBreakdown}
+                </p>
+              )}
+              {errors.amountPaid && (
+                <p className="text-xs text-destructive">{errors.amountPaid.message}</p>
+              )}
             </div>
             <Field label="Payment Reference ID" error={errors.paymentReferenceId}>
               <Input
