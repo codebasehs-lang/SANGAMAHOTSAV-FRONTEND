@@ -7,6 +7,8 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import Home from '@/pages/public/Home';
 import Registration from '@/pages/public/Registration';
 import Feedback from '@/pages/public/Feedback';
+import RegistrantLogin from '@/pages/public/RegistrantLogin';
+import RegistrantDashboard from '@/pages/public/RegistrantDashboard';
 
 import Login from '@/pages/admin/Login';
 import Dashboard from '@/pages/admin/Dashboard';
@@ -15,6 +17,7 @@ import RegistrationDetails from '@/pages/admin/RegistrationDetails';
 import Accommodation from '@/pages/admin/Accommodation';
 import Hotels from '@/pages/admin/Hotels';
 import SeminarHall from '@/pages/admin/SeminarHall';
+import Donations from '@/pages/admin/Donations';
 import SmsCampaigns from '@/pages/admin/SmsCampaigns';
 import FeedbackList from '@/pages/admin/FeedbackList';
 
@@ -26,6 +29,8 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/register" element={<Registration />} />
         <Route path="/feedback" element={<Feedback />} />
+        <Route path="/registrant/login" element={<RegistrantLogin />} />
+        <Route path="/registrant/dashboard" element={<RegistrantDashboard />} />
       </Route>
 
       {/* Admin auth */}
@@ -46,6 +51,7 @@ export default function App() {
         <Route path="accommodation" element={<Accommodation />} />
         <Route path="hotels" element={<Hotels />} />
         <Route path="seminar-hall" element={<SeminarHall />} />
+        <Route path="donations" element={<Donations />} />
         <Route path="sms" element={<SmsCampaigns />} />
         <Route path="feedback" element={<FeedbackList />} />
       </Route>

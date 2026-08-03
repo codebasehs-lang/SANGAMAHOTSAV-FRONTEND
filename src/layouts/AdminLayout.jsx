@@ -8,6 +8,7 @@ import {
   Building2,
   MessageSquare,
   Star,
+  Heart,
   LogOut,
   Menu,
   X,
@@ -22,6 +23,7 @@ const NAV = [
   { to: '/admin/accommodation', label: 'Accommodation', icon: BedDouble },
   { to: '/admin/hotels', label: 'Hotels', icon: Hotel },
   { to: '/admin/seminar-hall', label: 'Seminar Hall', icon: Building2 },
+  { to: '/admin/donations', label: 'Donations', icon: Heart },
   { to: '/admin/sms', label: 'SMS Campaigns', icon: MessageSquare },
   { to: '/admin/feedback', label: 'Feedback', icon: Star },
 ];

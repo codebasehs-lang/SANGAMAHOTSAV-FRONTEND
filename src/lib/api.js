@@ -21,14 +21,25 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// On 401, clear the token so the UI redirects to login.
+// On 401, clear the token and redirect only for truly unauthenticated sessions.
 api.interceptors.response.use(
   (res) => res,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem(TOKEN_KEY);
-      if (!window.location.pathname.startsWith('/admin/login')) {
-        window.location.assign('/admin/login');
+      const isRegistrantLogin =
+        window.location.pathname === '/registrant/login' &&
+        error.config?.url?.includes('/registrant-auth/login');
+      const isRegistrantPasswordChange =
+        window.location.pathname === '/registrant/dashboard' &&
+        error.config?.url?.includes('/registrant-auth/change-password');
+
+      if (!isRegistrantLogin && !isRegistrantPasswordChange) {
+        localStorage.removeItem(TOKEN_KEY);
+        if (window.location.pathname.startsWith('/registrant')) {
+          window.location.assign('/registrant/login');
+        } else if (!window.location.pathname.startsWith('/admin/login')) {
+          window.location.assign('/admin/login');
+        }
       }
     }
 

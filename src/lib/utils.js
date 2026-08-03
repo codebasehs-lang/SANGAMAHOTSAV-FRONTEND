@@ -28,3 +28,14 @@ export function humanize(value) {
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(' ');
 }
+
+/** Format a number as Indian Rupee currency. */
+export function currency(value) {
+  if (!value && value !== 0) return '₹0';
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(value);
+}

@@ -185,9 +185,13 @@ export default function Home() {
                   Register Now
                 </Link>
 
+                <Link to="/registrant/login" className="btn btn-login">
+                  Login
+                </Link>
+
                 <a
                   href="#donation-services"
-                  className="btn btn-outline"
+                  className="btn btn-donate"
                   onClick={(event) => {
                     event.preventDefault();
                     const section = document.getElementById('donation-services');

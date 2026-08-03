@@ -1,15 +1,17 @@
 import { useState } from 'react';
-import { Link, Outlet } from 'react-router-dom';
+import { Link, Outlet, useLocation } from 'react-router-dom';
 
 import SplashScreen from '@/components/SplashScreen';
 
 /** Public site shell with a simple header and footer. */
 export default function PublicLayout() {
+  const location = useLocation();
   const [showSplash, setShowSplash] = useState(true);
+  const shouldSkipSplash = location.pathname.startsWith('/registrant');
 
   return (
     <div className="flex min-h-screen flex-col">
-      {showSplash && <SplashScreen onClose={() => setShowSplash(false)} />}
+      {!shouldSkipSplash && showSplash && <SplashScreen onClose={() => setShowSplash(false)} />}
 
       <header className="border-b orange" style={{ display: "none" }}>
         <div className="container flex h-16 items-center justify-between">
