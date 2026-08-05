@@ -33,7 +33,7 @@ export default function RegistrantDashboard() {
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
-  const [activeSection, setActiveSection] = useState('basic');
+  const [activeSection, setActiveSection] = useState('notice');
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [profilePhoto, setProfilePhoto] = useState('');
   const [photoMessage, setPhotoMessage] = useState('');
