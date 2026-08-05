@@ -182,6 +182,7 @@ export default function Registration() {
   const [showMapModal, setShowMapModal] = useState(false);
   const arrivalDatePickerRef = useRef(null);
   const departureDatePickerRef = useRef(null);
+  const paymentSectionRef = useRef(null);
 
   const {
     register,
@@ -223,6 +224,7 @@ export default function Registration() {
   const sharedAccommodation = watch('sharedAccommodation');
   const familyAccommodation = watch('familyAccommodation');
   const isBrahmachari = watch('devoteeCategory') === 'BRAHMACHARI';
+  const isNonAttendingMode = nonAttendingType === 'NON_ATTENDING';
   const extraCharges = watch('extraCharges') || [];
   const watchedAge = watch('age');
   const watchedFamilyMembers = watch('familyMembers') || [];
@@ -238,27 +240,13 @@ export default function Registration() {
     0
   );
 
-  // Computes charge for a single person by age
-  function nonAttendingCharge(age) {
-    const a = Number(age) || 0;
-    if (a >= 18) return 3500;
-    if (a >= 12) return 1000;
-    return 0;
-  }
-
   // Comprehensive breakdown of all amount components shown below the total field
   const nonAttendingBreakdown = (() => {
     const parts = [];
 
     // Accommodation part
-    if (nonAttendingType === 'ATTENDING_NOT_STAYING') {
-      const mainAge = Number(watchedAge) || 0;
-      const adults = (mainAge >= 18 ? 1 : 0) +
-        watchedFamilyMembers.filter((m) => m.name && Number(m.age) >= 18).length;
-      const children = (mainAge >= 12 && mainAge < 18 ? 1 : 0) +
-        watchedFamilyMembers.filter((m) => m.name && Number(m.age) >= 12 && Number(m.age) < 18).length;
-      if (adults > 0) parts.push(`${adults} adult${adults !== 1 ? 's' : ''} × ₹3500`);
-      if (children > 0) parts.push(`${children} child${children !== 1 ? 'ren' : ''} (12-17) × ₹1000`);
+    if (nonAttendingType === 'NON_ATTENDING') {
+      parts.push('Non attending devotee contribution ₹2,000');
     } else {
       const PRICES = { DORMITORY: 5000, NON_AC_SHARING: 6000, AC_SHARING: 7000, DELUXE_AC: 18000, PREMIUM_AC: 19500 };
       const accom = nonAttendingType || sharedAccommodation || familyAccommodation;
@@ -315,8 +303,17 @@ export default function Registration() {
   }, [isBrahmachari, setValue]);
 
   useEffect(() => {
+    if (isNonAttendingMode) {
+      setValue('sharedAccommodation', '');
+      setValue('familyAccommodation', '');
+      setValue('extraCharges', []);
+      paymentSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [isNonAttendingMode, setValue]);
+
+  useEffect(() => {
     const PRICES = {
-      ATTENDING_NOT_STAYING: 3500,
+      NON_ATTENDING: 2000,
       DORMITORY: 5000,
       NON_AC_SHARING: 6000,
       AC_SHARING: 7000,
@@ -326,14 +323,8 @@ export default function Registration() {
 
     let total = 0;
 
-    if (nonAttendingType === 'ATTENDING_NOT_STAYING') {
-      // Age-based: >=18 → ₹3500, 12-17 → ₹1000, <12 → free
-      const mainAge = Number(watchedAge) || 0;
-      total += nonAttendingCharge(mainAge);
-      for (const m of watchedFamilyMembers) {
-        if (m.name) total += nonAttendingCharge(m.age);
-      }
-      if (total === 0) total = 3500; // minimum fallback
+    if (nonAttendingType === 'NON_ATTENDING') {
+      total = PRICES.NON_ATTENDING;
     } else if (nonAttendingType) {
       total = PRICES[nonAttendingType] ?? 0;
     } else if (sharedAccommodation) {
@@ -370,8 +361,6 @@ export default function Registration() {
     customDonationAmount,
     customDonationPurposeAmount,
     extraChargesTotal,
-    watchedAge,
-    watchedFamilyMembers,
     setValue,
   ]);
 
@@ -637,6 +626,42 @@ export default function Registration() {
                 <option value="FEMALE">Mataji</option>
               </select>
             </Field>
+            <div className="space-y-1.5 rounded-lg border border-emerald-200 bg-emerald-50/70 px-4 py-3">
+              <Label>Attendance Type</Label>
+              <div className="flex flex-col gap-2 text-sm">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="attendanceType"
+                    checked={!isNonAttendingMode}
+                    onChange={() =>
+                      setValue('nonAttendingType', '', {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      })
+                    }
+                  />
+                  Regular attendee
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="attendanceType"
+                    checked={isNonAttendingMode}
+                    onChange={() =>
+                      setValue('nonAttendingType', 'NON_ATTENDING', {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      })
+                    }
+                  />
+                  Non attending devotee contribution - ₹ 2,000/-
+                </label>
+              </div>
+              <p className="text-xs text-emerald-800">
+                Choosing non attending skips accommodation selection and moves you to payment.
+              </p>
+            </div>
           </CardContent>
         </Card>
 
@@ -881,23 +906,16 @@ export default function Registration() {
         
 
         {/* Accommodation */}
-        <Card>
+        <Card className={isNonAttendingMode ? 'opacity-60' : ''}>
           <CardHeader>
             <CardTitle>Accommodation Preferences</CardTitle>
             <CardDescription>
-              Please select only one option from the 7 accommodation choices.
+              {isNonAttendingMode
+                ? 'Accommodation is disabled because non attending devotee contribution is selected.'
+                : 'Please select only one option from the 7 accommodation choices.'}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <RadioGroup
-              label="Without Accommodation / Non Attending"
-              name="nonAttendingType"
-              options={NON_ATTENDING_TYPE}
-              selectedValue={selectedAccommodation}
-              onSelect={selectAccommodation}
-              disabled={isBrahmachari}
-              error={errors.nonAttendingType}
-            />
             <div className="space-y-2">
               <RadioGroup
                 label="Dormitory (Prabhuji & Mataji)"
@@ -905,7 +923,7 @@ export default function Registration() {
                 options={DORMITORY_OPTION ? [DORMITORY_OPTION] : []}
                 selectedValue={selectedAccommodation}
                 onSelect={selectAccommodation}
-                disabled={isBrahmachari}
+                disabled={isBrahmachari || isNonAttendingMode}
                 error={errors.sharedAccommodation}
               />
               <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
@@ -925,7 +943,7 @@ export default function Registration() {
               options={SHARED_ACCOMMODATION_PER_DEVOTEE}
               selectedValue={selectedAccommodation}
               onSelect={selectAccommodation}
-              disabled={isBrahmachari}
+              disabled={isBrahmachari || isNonAttendingMode}
               error={errors.sharedAccommodation}
             />
 
@@ -935,10 +953,10 @@ export default function Registration() {
               options={FAMILY_ACCOMMODATION}
               selectedValue={selectedAccommodation}
               onSelect={selectAccommodation}
-              disabled={isBrahmachari}
+              disabled={isBrahmachari || isNonAttendingMode}
               error={errors.familyAccommodation}
             />
-            {familyAccommodation && (
+            {familyAccommodation && !isNonAttendingMode && (
               <div className="space-y-2 rounded-md border border-amber-200 bg-amber-50/80 px-4 py-3 shadow-sm">
                 {EXTRA_CHARGE_OPTIONS.map((opt) => (
                   <label key={opt.value} className="flex items-center gap-3 text-sm text-amber-950">
@@ -997,6 +1015,7 @@ export default function Registration() {
         </Card>
 
         {/* Payment */}
+        <div ref={paymentSectionRef}>
         <Card>
           <CardHeader>
             <CardTitle></CardTitle>
@@ -1248,6 +1267,7 @@ export default function Registration() {
             </Field>
           </CardContent>
         </Card>
+        </div>
 
         <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
           {isSubmitting ? 'Submitting...' : 'Submit Registration'}

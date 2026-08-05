@@ -1,12 +1,27 @@
-import { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api, { getErrorMessage, tokenStore } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Eye, EyeOff, User, Home, CreditCard, MapPin } from 'lucide-react';
-import { currency, formatDate } from '@/lib/utils';
+import {
+  Eye,
+  EyeOff,
+  User,
+  MapPin,
+  Menu,
+  X,
+  BadgeInfo,
+  Building2,
+  ListChecks,
+  Wallet,
+  KeyRound,
+  Bell,
+  Camera,
+  Receipt,
+} from 'lucide-react';
+import { currency } from '@/lib/utils';
 
 export default function RegistrantDashboard() {
   const navigate = useNavigate();
@@ -18,6 +33,24 @@ export default function RegistrantDashboard() {
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
+  const [activeSection, setActiveSection] = useState('basic');
+  const [isNavOpen, setIsNavOpen] = useState(false);
+  const [profilePhoto, setProfilePhoto] = useState('');
+  const [photoMessage, setPhotoMessage] = useState('');
+  const [screenshotMessage, setScreenshotMessage] = useState('');
+  const photoInputRef = useRef(null);
+  const screenshotInputRef = useRef(null);
+
+  const sections = [
+    { key: 'basic', label: 'Basic Details', icon: BadgeInfo },
+    { key: 'accommodation', label: 'Accommodation', icon: Building2 },
+    { key: 'selections', label: 'Services', icon: ListChecks },
+    { key: 'payment', label: 'Payment', icon: Wallet },
+    { key: 'password', label: 'Change Password', icon: KeyRound },
+    { key: 'notice', label: 'Notice Board', icon: Bell },
+  ];
+  const activeSectionMeta = sections.find((section) => section.key === activeSection) || sections[0];
+  const cardClassName = 'border-emerald-100/80 bg-white/85 shadow-lg shadow-emerald-100/50 backdrop-blur';
 
   useEffect(() => {
     async function loadProfile() {
@@ -25,6 +58,7 @@ export default function RegistrantDashboard() {
       try {
         const { data } = await api.get('/registrant-auth/me');
         setProfile(data.data);
+        setProfilePhoto(data.data.profilePhoto || '');
       } catch (err) {
         setError(getErrorMessage(err));
         tokenStore.clear();
@@ -61,160 +95,474 @@ export default function RegistrantDashboard() {
     navigate('/registrant/login', { replace: true });
   }
 
+  function selectSection(sectionKey) {
+    setActiveSection(sectionKey);
+    setIsNavOpen(false);
+  }
+
+  function handlePickPhoto() {
+    photoInputRef.current?.click();
+  }
+
+  function handlePickScreenshot() {
+    screenshotInputRef.current?.click();
+  }
+
+  async function handlePhotoChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setPhotoMessage('');
+
+    if (!file.type.startsWith('image/')) {
+      setPhotoMessage('Please select an image file.');
+      e.target.value = '';
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      setPhotoMessage('Please select an image up to 2 MB.');
+      e.target.value = '';
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append('profilePhoto', file);
+
+      const { data } = await api.put('/registrant-auth/profile-photo', formData);
+      const nextPhoto = data?.data?.profilePhoto || '';
+      setProfilePhoto(nextPhoto);
+      setProfile((prev) => (prev ? { ...prev, profilePhoto: nextPhoto } : prev));
+      setPhotoMessage('Profile photo updated.');
+    } catch (err) {
+      setPhotoMessage(getErrorMessage(err));
+    }
+
+    e.target.value = '';
+  }
+
+  async function handleScreenshotChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setScreenshotMessage('');
+
+    if (!file.type.startsWith('image/')) {
+      setScreenshotMessage('Please select an image file.');
+      e.target.value = '';
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setScreenshotMessage('Please select an image up to 5 MB.');
+      e.target.value = '';
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append('paymentScreenshot', file);
+
+      const { data } = await api.put('/registrant-auth/payment-screenshot', formData);
+      const nextScreenshot = data?.data?.paymentScreenshot || '';
+      const nextAllowFlag = Boolean(data?.data?.allowPaymentScreenshotUpdate);
+      setProfile((prev) =>
+        prev
+          ? {
+              ...prev,
+              paymentScreenshot: nextScreenshot,
+              allowPaymentScreenshotUpdate: nextAllowFlag,
+            }
+          : prev
+      );
+      setScreenshotMessage('Payment screenshot updated.');
+    } catch (err) {
+      setScreenshotMessage(getErrorMessage(err));
+    }
+
+    e.target.value = '';
+  }
+
   if (loading) {
     return <div className="p-6 text-center">Loading your registration details...</div>;
   }
-
-  if (error && !profile) {
-    return <div className="p-6 text-center text-destructive">{error}</div>;
-  }
-
   return (
-    <div className="mx-auto max-w-6xl space-y-6 p-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="h-16 w-16 rounded-full bg-gradient-to-br from-emerald-700 to-emerald-500 shadow-lg shadow-emerald-200/50 flex items-center justify-center text-white ring-1 ring-emerald-100">
-            <User className="h-7 w-7" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-serif text-emerald-900">My Registration</h1>
-            <p className="mt-1 text-sm text-emerald-700">Registration summary, accommodation and payments.</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <Button variant="success" onClick={() => window.print()}>Print</Button>
-          <Button variant="success" onClick={handleLogout}>Logout</Button>
-        </div>
-      </div>
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-emerald-50 via-teal-50 to-sky-100">
+      <div className="pointer-events-none absolute -left-20 -top-20 h-72 w-72 rounded-full bg-emerald-300/30 blur-3xl" />
+      <div className="pointer-events-none absolute right-0 top-1/3 h-80 w-80 rounded-full bg-sky-300/25 blur-3xl" />
+      <div className="pointer-events-none absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-teal-200/35 blur-3xl" />
 
-      <div className="grid gap-6 md:grid-cols-3">
-        <Card className="col-span-2">
-          <CardHeader>
-            <CardTitle>Basic Details</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-muted-foreground text-xs">Name</p>
-                <p className="font-medium">{profile?.name}</p>
+      <div className="relative mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
+        <Card className="border-emerald-100/80 bg-white/85 shadow-xl shadow-emerald-100/60 backdrop-blur">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="md:hidden"
+                  onClick={() => setIsNavOpen(true)}
+                  aria-label="Open section menu"
+                >
+                  <Menu className="h-5 w-5" />
+                </Button>
+                <div className="relative">
+                  <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-emerald-700 to-emerald-500 text-white shadow-lg shadow-emerald-200/50 ring-1 ring-emerald-100 sm:h-16 sm:w-16">
+                    {profilePhoto ? (
+                      <img
+                        src={profilePhoto}
+                        alt="Profile"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <User className="h-7 w-7" />
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handlePickPhoto}
+                    className="absolute -bottom-1 -right-1 rounded-full border border-emerald-100 bg-white p-1.5 text-emerald-700 shadow-sm transition-colors hover:bg-emerald-50"
+                    aria-label="Change profile photo"
+                  >
+                    <Camera className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                <div>
+                  <h1 className="text-2xl font-serif text-emerald-900 sm:text-3xl">My Registration</h1>
+                  <p className="mt-1 text-sm text-emerald-700">Registration summary, accommodation and payments.</p>
+                  <div className="mt-1">
+                    <button
+                      type="button"
+                      onClick={handlePickPhoto}
+                      className="text-xs font-medium text-emerald-700 underline underline-offset-2 hover:text-emerald-900"
+                    >
+                      Change photo
+                    </button>
+                  </div>
+                  {photoMessage && <p className="mt-1 text-xs text-emerald-700">{photoMessage}</p>}
+                </div>
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handlePhotoChange}
+                />
               </div>
-              <div>
-                <p className="text-muted-foreground text-xs">Initiated Name</p>
-                <p className="font-medium">{profile?.initiatedName || '-'}</p>
+              <div className="flex w-full items-center justify-end sm:w-auto">
+                <Button variant="success" onClick={handleLogout}>Logout</Button>
               </div>
-              <div>
-                <p className="text-muted-foreground text-xs">Age</p>
-                <p className="font-medium">{profile?.age}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground text-xs">Category</p>
-                <p className="font-medium">{profile?.devoteeCategory}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground text-xs">Mobile</p>
-                <p className="font-medium">{profile?.mobileNumber}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground text-xs">Coming From</p>
-                <p className="font-medium">{profile?.comingFrom}</p>
-              </div>
+            </div>
+
+            <div className="mt-4 flex items-center gap-2 rounded-md border border-emerald-100 bg-emerald-50/70 p-2 md:hidden">
+              <activeSectionMeta.icon className="h-4 w-4 text-emerald-700" />
+              <p className="text-sm font-medium text-emerald-900">{activeSectionMeta.label}</p>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Accommodation</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <p>
-              <span className="text-muted-foreground text-xs">Status</span>
-              <span className={`ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${profile?.accommodationStatus === 'ASSIGNED' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                {profile?.accommodationStatus}
-              </span>
-            </p>
-            {profile?.assignment ? (
-              <>
-                <p className="text-sm"><strong>Hotel:</strong> {profile.assignment.hotelName}</p>
-                <p className="text-sm"><strong>Room:</strong> {profile.assignment.roomNumber}</p>
-                <p className="text-sm"><strong>Address:</strong> {profile.assignment.hotelAddress}</p>
-                {profile.assignment.hotelMapLink && <a href={profile.assignment.hotelMapLink} target="_blank" rel="noreferrer" className="text-primary inline-flex items-center gap-2"><MapPin className="h-4 w-4"/>Open map</a>}
-              </>
-            ) : (
-              <p className="text-sm">No accommodation assigned yet.</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-3">
-        <Card className="col-span-2">
-          <CardHeader>
-            <CardTitle>Selections</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <p><strong>Services:</strong> {profile?.services?.length ? profile.services.join(', ') : '-'}</p>
-            <p><strong>Donation Items:</strong> {profile?.donationItems?.length ? profile.donationItems.map((item) => item?.id || item?.label || JSON.stringify(item)).join(', ') : '-'}</p>
-            <p><strong>Extra Charges:</strong> {profile?.extraCharges?.length ? profile.extraCharges.join(', ') : '-'}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Payment</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <p><span className="text-muted-foreground text-xs">Status</span> <span className={`ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${profile?.paymentStatus === 'APPROVED' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>{profile?.paymentStatus}</span></p>
-            <p className="mt-2"><strong>Amount Paid:</strong> {currency(profile?.amountPaid || 0)}</p>
-            <p><strong>Reference:</strong> {profile?.paymentReferenceId || '-'}</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Change Password</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handlePasswordChange} className="space-y-3">
-              <div className="space-y-1.5">
-                <Label>Current Password</Label>
-                <div className="relative">
-                  <Input type={showCurrent ? 'text' : 'password'} value={passwordForm.currentPassword} onChange={(e) => setPasswordForm((prev) => ({ ...prev, currentPassword: e.target.value }))} required />
-                  <button type="button" aria-label={showCurrent ? 'Hide password' : 'Show password'} onClick={() => setShowCurrent((s) => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700">
-                    {showCurrent ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                  </button>
-                </div>
+        {isNavOpen && (
+          <div className="fixed inset-0 z-50 md:hidden">
+            <button
+              type="button"
+              className="absolute inset-0 bg-black/40"
+              onClick={() => setIsNavOpen(false)}
+              aria-label="Close section menu"
+            />
+            <div className="absolute left-0 top-0 h-full w-72 border-r border-emerald-100 bg-white p-4 shadow-2xl">
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-sm font-semibold uppercase tracking-wide text-emerald-800">Sections</p>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setIsNavOpen(false)}
+                  aria-label="Close section menu"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
               </div>
-              <div className="space-y-1.5">
-                <Label>New Password</Label>
-                <div className="relative">
-                  <Input type={showNew ? 'text' : 'password'} value={passwordForm.newPassword} onChange={(e) => setPasswordForm((prev) => ({ ...prev, newPassword: e.target.value }))} required />
-                  <button type="button" aria-label={showNew ? 'Hide password' : 'Show password'} onClick={() => setShowNew((s) => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700">
-                    {showNew ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                  </button>
-                </div>
+              <div className="space-y-2">
+                {sections.map((section) => {
+                  const Icon = section.icon;
+                  const isActive = activeSection === section.key;
+                  return (
+                    <button
+                      key={section.key}
+                      type="button"
+                      onClick={() => selectSection(section.key)}
+                      className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors ${
+                        isActive
+                          ? 'bg-emerald-700 text-white shadow-sm'
+                          : 'bg-emerald-50/60 text-emerald-900 hover:bg-emerald-100'
+                      }`}
+                    >
+                      <Icon className="h-4 w-4" />
+                      <span>{section.label}</span>
+                    </button>
+                  );
+                })}
               </div>
-              {passwordMessage && <p className="text-sm text-muted-foreground">{passwordMessage}</p>}
-              <Button type="submit" variant="success" disabled={passwordLoading}>
-                {passwordLoading ? 'Updating...' : 'Update Password'}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+            </div>
+          </div>
+        )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Button variant="success" onClick={() => window.location.reload()}>Refresh</Button>
-            {profile?.assignment?.hotelMapLink && (
-              <a href={profile.assignment.hotelMapLink} target="_blank" rel="noreferrer" className="inline-block text-primary">Open hotel map</a>
+        <div className="grid gap-6 md:grid-cols-[240px_1fr]">
+          <Card className={`hidden md:block ${cardClassName}`}>
+            <CardHeader>
+              <CardTitle>Navigation</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {sections.map((section) => {
+                const Icon = section.icon;
+                const isActive = activeSection === section.key;
+                return (
+                  <button
+                    key={section.key}
+                    type="button"
+                    onClick={() => selectSection(section.key)}
+                    className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors ${
+                      isActive
+                        ? 'bg-emerald-700 text-white shadow-sm'
+                        : 'bg-emerald-50/60 text-emerald-900 hover:bg-emerald-100'
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span>{section.label}</span>
+                  </button>
+                );
+              })}
+            </CardContent>
+          </Card>
+
+          <div className="space-y-6">
+            {activeSection === 'basic' && (
+              <Card className={cardClassName}>
+                <CardHeader>
+                  <CardTitle>Basic Details</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <p className="text-muted-foreground text-xs">Name</p>
+                      <p className="font-medium">{profile?.name}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Initiated Name</p>
+                      <p className="font-medium">{profile?.initiatedName || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Age</p>
+                      <p className="font-medium">{profile?.age}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Category</p>
+                      <p className="font-medium">{profile?.devoteeCategory}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Mobile</p>
+                      <p className="font-medium">{profile?.mobileNumber}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Coming From</p>
+                      <p className="font-medium">{profile?.comingFrom}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             )}
-          </CardContent>
-        </Card>
+
+            {activeSection === 'accommodation' && (
+              <Card className={cardClassName}>
+                <CardHeader>
+                  <CardTitle>Accommodation</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  <p>
+                    <span className="text-muted-foreground text-xs">Status</span>
+                    <span className={`ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${profile?.accommodationStatus === 'ASSIGNED' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                      {profile?.accommodationStatus}
+                    </span>
+                  </p>
+                  {profile?.assignment ? (
+                    <>
+                      <p className="text-sm"><strong>Hotel:</strong> {profile.assignment.hotelName}</p>
+                      <p className="text-sm"><strong>Room:</strong> {profile.assignment.roomNumber}</p>
+                      <p className="text-sm"><strong>Address:</strong> {profile.assignment.hotelAddress}</p>
+                      {profile.assignment.hotelMapLink && <a href={profile.assignment.hotelMapLink} target="_blank" rel="noreferrer" className="text-primary inline-flex items-center gap-2"><MapPin className="h-4 w-4"/>Open map</a>}
+                    </>
+                  ) : (
+                    <p className="text-sm">No accommodation assigned yet.</p>
+                  )}
+
+                  <div className="mt-4 rounded-md border border-emerald-100 bg-emerald-50/40 p-3">
+                    <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-emerald-800">
+                      Seminar Hall (Common)
+                    </p>
+                    {profile?.seminarHall ? (
+                      <>
+                        <p className="text-sm"><strong>Hall:</strong> {profile.seminarHall.hallName}</p>
+                        <p className="text-sm"><strong>Address:</strong> {profile.seminarHall.hallAddress}</p>
+                        {profile.seminarHall.hallMapLink && (
+                          <a
+                            href={profile.seminarHall.hallMapLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-primary inline-flex items-center gap-2"
+                          >
+                            <MapPin className="h-4 w-4" />
+                            Open seminar hall map
+                          </a>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        Seminar hall details will be updated soon.
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {activeSection === 'selections' && (
+              <Card className={cardClassName}>
+                <CardHeader>
+                  <CardTitle>Services</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  <p><strong>Services:</strong> {profile?.services?.length ? profile.services.join(', ') : '-'}</p>
+                  <p><strong>Donation Items:</strong> {profile?.donationItems?.length ? profile.donationItems.map((item) => item?.id || item?.label || JSON.stringify(item)).join(', ') : '-'}</p>
+                </CardContent>
+              </Card>
+            )}
+
+            {activeSection === 'payment' && (
+              <Card className={cardClassName}>
+                <CardHeader>
+                  <CardTitle>Payment</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  <p><span className="text-muted-foreground text-xs">Status</span> <span className={`ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${profile?.paymentStatus === 'APPROVED' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>{profile?.paymentStatus}</span></p>
+                  <p className="mt-2"><strong>Amount Paid:</strong> {currency(profile?.amountPaid || 0)}</p>
+                  <p><strong>Reference:</strong> {profile?.paymentReferenceId || '-'}</p>
+                  <div className="mt-4 rounded-md border border-emerald-100 bg-emerald-50/40 p-3">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-emerald-800">
+                          Payment Screenshot
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {profile?.paymentScreenshot
+                            ? 'Uploaded screenshot is shown below.'
+                            : 'No payment screenshot uploaded yet. You can upload it here.'}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handlePickScreenshot}
+                        disabled={Boolean(profile?.paymentScreenshot) && !profile?.allowPaymentScreenshotUpdate}
+                        className="w-full sm:w-auto"
+                      >
+                        <Receipt className="h-4 w-4" />
+                        {profile?.paymentScreenshot ? 'Update Screenshot' : 'Upload Screenshot'}
+                      </Button>
+                    </div>
+
+                    <input
+                      ref={screenshotInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleScreenshotChange}
+                    />
+
+                    {screenshotMessage && (
+                      <p className="mt-2 text-xs text-emerald-700">{screenshotMessage}</p>
+                    )}
+
+                    {profile?.paymentScreenshot && !profile?.allowPaymentScreenshotUpdate ? (
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        Screenshot updates are currently disabled. Contact admin if this needs to be changed.
+                      </p>
+                    ) : null}
+
+                    {profile?.paymentScreenshot ? (
+                      <a
+                        href={profile.paymentScreenshot}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-3 block overflow-hidden rounded-lg border border-emerald-100 bg-white"
+                      >
+                        <img
+                          src={profile.paymentScreenshot}
+                          alt="Payment screenshot"
+                          className="max-h-[420px] w-full object-contain bg-white"
+                        />
+                      </a>
+                    ) : null}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {activeSection === 'password' && (
+              <Card className={cardClassName}>
+                <CardHeader>
+                  <CardTitle>Change Password</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handlePasswordChange} className="space-y-3">
+                    <div className="space-y-1.5">
+                      <Label>Current Password</Label>
+                      <div className="relative">
+                        <Input type={showCurrent ? 'text' : 'password'} value={passwordForm.currentPassword} onChange={(e) => setPasswordForm((prev) => ({ ...prev, currentPassword: e.target.value }))} required />
+                        <button type="button" aria-label={showCurrent ? 'Hide password' : 'Show password'} onClick={() => setShowCurrent((s) => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700">
+                          {showCurrent ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>New Password</Label>
+                      <div className="relative">
+                        <Input type={showNew ? 'text' : 'password'} value={passwordForm.newPassword} onChange={(e) => setPasswordForm((prev) => ({ ...prev, newPassword: e.target.value }))} required />
+                        <button type="button" aria-label={showNew ? 'Hide password' : 'Show password'} onClick={() => setShowNew((s) => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700">
+                          {showNew ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                        </button>
+                      </div>
+                    </div>
+                    {passwordMessage && <p className="text-sm text-muted-foreground">{passwordMessage}</p>}
+                    <Button type="submit" variant="success" disabled={passwordLoading}>
+                      {passwordLoading ? 'Updating...' : 'Update Password'}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            )}
+
+            {activeSection === 'notice' && (
+              <Card className={cardClassName}>
+                <CardHeader>
+                  <CardTitle>Notice Board</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {profile?.noticeBoardMessages?.length ? (
+                    <div className="space-y-3">
+                      {profile.noticeBoardMessages.map((notice) => (
+                        <div key={notice.id} className="rounded-md border border-emerald-100 bg-emerald-50/60 p-3">
+                          <p className="whitespace-pre-wrap text-sm text-emerald-900">{notice.message}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No notices from admin yet.</p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

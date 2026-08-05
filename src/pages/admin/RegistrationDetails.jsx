@@ -67,6 +67,7 @@ export default function RegistrationDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [lightboxSrc, setLightboxSrc] = useState(null);
+  const [toggleLoading, setToggleLoading] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -81,6 +82,22 @@ export default function RegistrationDetails() {
     }
     load();
   }, [id]);
+
+  async function handleToggleScreenshotUpdate() {
+    if (!reg) return;
+
+    setToggleLoading(true);
+    try {
+      const { data } = await api.put(`/registrations/${id}`, {
+        allowPaymentScreenshotUpdate: !reg.allowPaymentScreenshotUpdate,
+      });
+      setReg(data.data);
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setToggleLoading(false);
+    }
+  }
 
   if (loading) return <FullPageSpinner />;
   if (error) return <p className="text-destructive">{error}</p>;
@@ -163,7 +180,7 @@ export default function RegistrationDetails() {
             <dl>
               <Row label="Arrival" value={`${formatDate(reg.arrivalDate)} ${reg.arrivalTime || ''}`} />
               <Row label="Departure" value={`${formatDate(reg.departureDate)} ${reg.departureTime || ''}`} />
-              <Row label="Non Attending" value={humanize(reg.nonAttendingType)} />
+              <Row label="Non Attending" value={reg.nonAttendingType ? humanize(reg.nonAttendingType) : 'No'} />
               <Row label="Shared Accom." value={humanize(reg.sharedAccommodation)} />
               <Row label="Family Accom." value={humanize(reg.familyAccommodation)} />
               <Row label="Extra Charges" value={extraChargeLabel} />
@@ -204,6 +221,29 @@ export default function RegistrationDetails() {
                       Pending
                     </span>
                   )}
+                </dd>
+              </div>
+              <div className="flex flex-col gap-2 border-b py-2 text-sm last:border-0 sm:grid sm:grid-cols-3 sm:gap-2">
+                <dt className="text-muted-foreground">Screenshot Update</dt>
+                <dd className="sm:col-span-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${reg.allowPaymentScreenshotUpdate ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
+                      {reg.allowPaymentScreenshotUpdate ? 'Enabled' : 'Disabled'}
+                    </span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={toggleLoading}
+                      onClick={handleToggleScreenshotUpdate}
+                    >
+                      {toggleLoading
+                        ? 'Saving...'
+                        : reg.allowPaymentScreenshotUpdate
+                        ? 'Disable Update'
+                        : 'Enable Update'}
+                    </Button>
+                  </div>
                 </dd>
               </div>
               {reg.paymentScreenshot && (

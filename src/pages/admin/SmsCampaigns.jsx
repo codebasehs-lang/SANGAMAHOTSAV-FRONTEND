@@ -31,6 +31,7 @@ import { Spinner } from '@/components/Spinner';
 
 const MESSAGE_CHANNEL_OPTIONS = [
   { value: 'WHATSAPP', label: 'WhatsApp' },
+  { value: 'APPLICATION', label: 'Application (Notice Board)' },
   { value: 'SMS', label: 'SMS' },
 ];
 
@@ -52,6 +53,7 @@ export default function SmsCampaigns() {
 
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
+  const isApplicationChannel = channel === 'APPLICATION';
 
   async function loadCampaigns() {
     setLoading(true);
@@ -109,8 +111,8 @@ export default function SmsCampaigns() {
     setResult(null);
     try {
       const payload = { type, channel };
-      if (type === 'CUSTOM') payload.message = message;
-      if (audience === 'SELECTED')
+      if (type === 'CUSTOM' || isApplicationChannel) payload.message = message;
+      if (!isApplicationChannel && audience === 'SELECTED')
         payload.registrationIds = selected.map((r) => r.id);
 
       const { data } = await api.post('/sms/campaigns', payload);
@@ -130,6 +132,7 @@ export default function SmsCampaigns() {
   const disableSend =
     sending ||
     (type === 'CUSTOM' && !message.trim()) ||
+    (isApplicationChannel && !message.trim()) ||
     (audience === 'SELECTED' && selected.length === 0);
 
   return (
@@ -143,20 +146,29 @@ export default function SmsCampaigns() {
             <CardDescription>
               Send to all eligible devotees, or search and pick specific
               recipients. Accommodation messages are sent only to devotees with an
-              assigned room.
+              assigned room. Application channel posts directly to Notice Board.
             </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex flex-wrap gap-4">
-            <div className="min-w-[220px] space-y-1.5">
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="space-y-1.5">
               <Label>Channel</Label>
               <Select
                 options={MESSAGE_CHANNEL_OPTIONS}
                 value={channel}
-                onChange={(e) => setChannel(e.target.value)}
+                onChange={(e) => {
+                  const nextChannel = e.target.value;
+                  setChannel(nextChannel);
+                  if (nextChannel === 'APPLICATION') {
+                    setAudience('ALL');
+                    setSelected([]);
+                    setSearch('');
+                    setResults([]);
+                  }
+                }}
               />
             </div>
-            <div className="min-w-[240px] space-y-1.5">
+            <div className="space-y-1.5">
               <Label>Campaign Type</Label>
               <Select
                 options={SMS_CAMPAIGN_TYPE}
@@ -164,7 +176,7 @@ export default function SmsCampaigns() {
                 onChange={(e) => setType(e.target.value)}
               />
             </div>
-            <div className="min-w-[240px] space-y-1.5">
+            <div className="space-y-1.5">
               <Label>Recipients</Label>
               <Select
                 options={[
@@ -173,17 +185,22 @@ export default function SmsCampaigns() {
                 ]}
                 value={audience}
                 onChange={(e) => setAudience(e.target.value)}
+                disabled={isApplicationChannel}
               />
             </div>
           </div>
 
-          {type === 'CUSTOM' && (
+          {(type === 'CUSTOM' || isApplicationChannel) && (
             <div className="space-y-1.5">
-              <Label>Message</Label>
+              <Label>{isApplicationChannel ? 'Notice Message' : 'Message'}</Label>
               <Textarea
                 rows={4}
                 maxLength={1000}
-                placeholder="Type your message. Use {{name}} to insert the devotee's name."
+                placeholder={
+                  isApplicationChannel
+                    ? 'Type the notice to display on devotee Notice Board.'
+                    : "Type your message. Use {{name}} to insert the devotee's name."
+                }
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
               />
@@ -193,7 +210,7 @@ export default function SmsCampaigns() {
             </div>
           )}
 
-          {audience === 'SELECTED' && (
+          {!isApplicationChannel && audience === 'SELECTED' && (
             <div className="space-y-3">
               <div className="space-y-1.5">
                 <Label>Search by name or phone number</Label>
@@ -220,7 +237,7 @@ export default function SmsCampaigns() {
                       return (
                         <label
                           key={r.id}
-                          className="flex cursor-pointer items-center gap-3 border-b px-3 py-2 text-sm last:border-b-0 hover:bg-accent"
+                          className="flex cursor-pointer flex-wrap items-center gap-2 border-b px-3 py-2 text-sm last:border-b-0 hover:bg-accent sm:flex-nowrap"
                         >
                           <input
                             type="checkbox"
@@ -228,8 +245,8 @@ export default function SmsCampaigns() {
                             checked={checked}
                             onChange={() => toggleRecipient(r)}
                           />
-                          <span className="font-medium">{r.name}</span>
-                          <span className="ml-auto text-muted-foreground">
+                          <span className="max-w-full truncate font-medium sm:max-w-[60%]">{r.name}</span>
+                          <span className="text-muted-foreground sm:ml-auto">
                             {r.mobileNumber}
                           </span>
                         </label>
@@ -262,7 +279,7 @@ export default function SmsCampaigns() {
           )}
 
           <div>
-            <Button onClick={send} disabled={disableSend}>
+            <Button onClick={send} disabled={disableSend} className="w-full sm:w-auto">
               <Send className="h-4 w-4" />
               {sending ? 'Sending...' : 'Send Campaign'}
             </Button>
@@ -282,7 +299,11 @@ export default function SmsCampaigns() {
       )}
       {result && (
         <div className="rounded-md border border-green-500/50 bg-green-50 p-3 text-sm text-green-800">
-          {result.channel === 'WHATSAPP' ? 'WhatsApp' : 'SMS'} campaign #{result.campaignId} processed - {result.sentCount} sent,{' '}
+          {result.channel === 'WHATSAPP'
+            ? 'WhatsApp'
+            : result.channel === 'APPLICATION'
+            ? 'Application notice'
+            : 'SMS'} campaign #{result.campaignId} processed - {result.sentCount} sent,{' '}
           {result.failedCount} failed of {result.totalRecipients}.
         </div>
       )}
