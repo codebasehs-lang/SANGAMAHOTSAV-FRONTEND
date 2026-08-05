@@ -11,7 +11,6 @@ import {
   User,
   MapPin,
   Menu,
-  X,
   BadgeInfo,
   Building2,
   ListChecks,
@@ -20,8 +19,11 @@ import {
   Bell,
   Camera,
   Receipt,
+  MessageSquare,
+  Star,
 } from 'lucide-react';
-import { currency } from '@/lib/utils';
+import { Textarea } from '@/components/ui/textarea';
+import { cn, currency } from '@/lib/utils';
 
 export default function RegistrantDashboard() {
   const navigate = useNavigate();
@@ -38,6 +40,11 @@ export default function RegistrantDashboard() {
   const [profilePhoto, setProfilePhoto] = useState('');
   const [photoMessage, setPhotoMessage] = useState('');
   const [screenshotMessage, setScreenshotMessage] = useState('');
+  const [feedbackForm, setFeedbackForm] = useState({ name: '', mobileNumber: '', overallRating: 0, suggestions: '' });
+  const [feedbackRating, setFeedbackRating] = useState(0);
+  const [feedbackMessage, setFeedbackMessage] = useState('');
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
   const photoInputRef = useRef(null);
   const screenshotInputRef = useRef(null);
 
@@ -48,6 +55,7 @@ export default function RegistrantDashboard() {
     { key: 'payment', label: 'Payment', icon: Wallet },
     { key: 'password', label: 'Change Password', icon: KeyRound },
     { key: 'notice', label: 'Notice Board', icon: Bell },
+    { key: 'feedback', label: 'Feedback', icon: MessageSquare },
   ];
   const activeSectionMeta = sections.find((section) => section.key === activeSection) || sections[0];
   const cardClassName = 'border-emerald-100/80 bg-white/85 shadow-lg shadow-emerald-100/50 backdrop-blur';
@@ -98,6 +106,13 @@ export default function RegistrantDashboard() {
   function selectSection(sectionKey) {
     setActiveSection(sectionKey);
     setIsNavOpen(false);
+    if (sectionKey === 'feedback' && profile && !feedbackSubmitted) {
+      setFeedbackForm((prev) => ({
+        ...prev,
+        name: prev.name || profile.initiatedName || profile.name || '',
+        mobileNumber: prev.mobileNumber || profile.mobileNumber || '',
+      }));
+    }
   }
 
   function handlePickPhoto() {
@@ -196,25 +211,22 @@ export default function RegistrantDashboard() {
       <div className="relative mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
         <Card className="border-emerald-100/80 bg-white/85 shadow-xl shadow-emerald-100/60 backdrop-blur">
           <CardContent className="p-4 sm:p-6">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3 sm:gap-4">
+            {/* Header row: [menu?] [avatar] [name/details] ... [logout] */}
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
                 <Button
                   variant="outline"
                   size="icon"
-                  className="md:hidden"
+                  className="shrink-0 md:hidden"
                   onClick={() => setIsNavOpen(true)}
                   aria-label="Open section menu"
                 >
                   <Menu className="h-5 w-5" />
                 </Button>
-                <div className="relative">
+                <div className="relative shrink-0">
                   <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-emerald-700 to-emerald-500 text-white shadow-lg shadow-emerald-200/50 ring-1 ring-emerald-100 sm:h-16 sm:w-16">
                     {profilePhoto ? (
-                      <img
-                        src={profilePhoto}
-                        alt="Profile"
-                        className="h-full w-full object-cover"
-                      />
+                      <img src={profilePhoto} alt="Profile" className="h-full w-full object-cover" />
                     ) : (
                       <User className="h-7 w-7" />
                     )}
@@ -228,32 +240,26 @@ export default function RegistrantDashboard() {
                     <Camera className="h-3.5 w-3.5" />
                   </button>
                 </div>
-                <div>
-                  <h1 className="text-2xl font-serif text-emerald-900 sm:text-3xl">My Registration</h1>
-                  <p className="mt-1 text-sm text-emerald-700">Registration summary, accommodation and payments.</p>
-                  <div className="mt-1">
-                    <button
-                      type="button"
-                      onClick={handlePickPhoto}
-                      className="text-xs font-medium text-emerald-700 underline underline-offset-2 hover:text-emerald-900"
-                    >
-                      Change photo
-                    </button>
-                  </div>
+                <div className="min-w-0 hidden md:block">
+                  <p className="text-xs font-medium uppercase tracking-widest text-emerald-500">Welcome back 🙏</p>
+                  <h1 className="truncate text-xl font-serif text-emerald-900 sm:text-3xl">
+                    {profile?.initiatedName || profile?.name}
+                  </h1>
+                  <p className="mt-0.5 truncate text-xs text-emerald-600">{profile?.devoteeCategory} · {profile?.comingFrom}</p>
+                  <button
+                    type="button"
+                    onClick={handlePickPhoto}
+                    className="mt-1 text-xs font-medium text-emerald-700 underline underline-offset-2 hover:text-emerald-900"
+                  >
+                    Change photo
+                  </button>
                   {photoMessage && <p className="mt-1 text-xs text-emerald-700">{photoMessage}</p>}
                 </div>
-                <input
-                  ref={photoInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handlePhotoChange}
-                />
               </div>
-              <div className="flex w-full items-center justify-end sm:w-auto">
-                <Button variant="success" onClick={handleLogout}>Logout</Button>
-              </div>
+              <Button variant="success" className="shrink-0" onClick={handleLogout}>Logout</Button>
             </div>
+            <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
+            {photoMessage && <p className="mt-2 text-xs text-emerald-700 md:hidden">{photoMessage}</p>}
 
             <div className="mt-4 flex items-center gap-2 rounded-md border border-emerald-100 bg-emerald-50/70 p-2 md:hidden">
               <activeSectionMeta.icon className="h-4 w-4 text-emerald-700" />
@@ -270,18 +276,31 @@ export default function RegistrantDashboard() {
               onClick={() => setIsNavOpen(false)}
               aria-label="Close section menu"
             />
-            <div className="absolute left-0 top-0 h-full w-72 border-r border-emerald-100 bg-white p-4 shadow-2xl">
-              <div className="mb-3 flex items-center justify-between">
-                <p className="text-sm font-semibold uppercase tracking-wide text-emerald-800">Sections</p>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setIsNavOpen(false)}
-                  aria-label="Close section menu"
-                >
-                  <X className="h-5 w-5" />
-                </Button>
+            <div className="absolute left-0 top-0 h-full w-72 border-r border-emerald-100 bg-white shadow-2xl flex flex-col">
+              {/* Profile strip */}
+              <div className="bg-gradient-to-br from-emerald-700 to-emerald-500 px-4 pb-5 pt-5">
+                <div className="flex items-center gap-3">
+                    <div className="h-14 w-14 shrink-0 overflow-hidden rounded-full bg-white/20 ring-2 ring-white/40">
+                      {profilePhoto ? (
+                        <img src={profilePhoto} alt="Profile" className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-white">
+                          <User className="h-7 w-7" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-medium uppercase tracking-widest text-emerald-100">Welcome back 🙏</p>
+                      <p className="truncate font-serif text-base font-semibold text-white">
+                        {profile?.initiatedName || profile?.name}
+                      </p>
+                      <p className="truncate text-xs text-emerald-200">{profile?.devoteeCategory} · {profile?.comingFrom}</p>
+                    </div>
+                  </div>
               </div>
+              {/* Nav links */}
+              <div className="flex-1 overflow-y-auto p-4">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-emerald-600">Sections</p>
               <div className="space-y-2">
                 {sections.map((section) => {
                   const Icon = section.icon;
@@ -302,6 +321,7 @@ export default function RegistrantDashboard() {
                     </button>
                   );
                 })}
+              </div>
               </div>
             </div>
           </div>
@@ -557,6 +577,102 @@ export default function RegistrantDashboard() {
                     </div>
                   ) : (
                     <p className="text-sm text-muted-foreground">No notices from admin yet.</p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {activeSection === 'feedback' && (
+              <Card className={cardClassName}>
+                <CardHeader>
+                  <CardTitle>Seminar Feedback</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {feedbackSubmitted ? (
+                    <div className="flex flex-col items-center gap-3 py-10 text-center">
+                      <MessageSquare className="h-12 w-12 text-emerald-600" />
+                      <p className="text-lg font-semibold text-emerald-900">Thank You!</p>
+                      <p className="text-sm text-muted-foreground">Your feedback has been submitted. Hare Krishna!</p>
+                    </div>
+                  ) : (
+                    <form
+                      className="space-y-4"
+                      onSubmit={async (e) => {
+                        e.preventDefault();
+                        setFeedbackMessage('');
+                        if (!feedbackRating) {
+                          setFeedbackMessage('Please select a rating.');
+                          return;
+                        }
+                        setFeedbackLoading(true);
+                        try {
+                          await api.post('/feedbacks', {
+                            name: feedbackForm.name,
+                            mobileNumber: feedbackForm.mobileNumber,
+                            overallRating: feedbackRating,
+                            suggestions: feedbackForm.suggestions || undefined,
+                          });
+                          setFeedbackSubmitted(true);
+                        } catch (err) {
+                          setFeedbackMessage(getErrorMessage(err));
+                        } finally {
+                          setFeedbackLoading(false);
+                        }
+                      }}
+                    >
+                      <div className="space-y-1.5">
+                        <Label>Name <span className="text-destructive">*</span></Label>
+                        <Input
+                          value={feedbackForm.name}
+                          onChange={(e) => setFeedbackForm((p) => ({ ...p, name: e.target.value }))}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Mobile Number <span className="text-destructive">*</span></Label>
+                        <Input
+                          value={feedbackForm.mobileNumber}
+                          onChange={(e) => setFeedbackForm((p) => ({ ...p, mobileNumber: e.target.value }))}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Overall Experience <span className="text-destructive">*</span></Label>
+                        <div className="flex gap-1">
+                          {[1, 2, 3, 4, 5].map((v) => (
+                            <button
+                              key={v}
+                              type="button"
+                              onClick={() => setFeedbackRating(v)}
+                              aria-label={`${v} star`}
+                            >
+                              <Star
+                                className={cn(
+                                  'h-8 w-8 transition-colors',
+                                  v <= feedbackRating
+                                    ? 'fill-yellow-400 text-yellow-400'
+                                    : 'text-muted-foreground'
+                                )}
+                              />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Suggestions</Label>
+                        <Textarea
+                          rows={4}
+                          value={feedbackForm.suggestions}
+                          onChange={(e) => setFeedbackForm((p) => ({ ...p, suggestions: e.target.value }))}
+                        />
+                      </div>
+                      {feedbackMessage && (
+                        <p className="text-sm text-destructive">{feedbackMessage}</p>
+                      )}
+                      <Button type="submit" className="w-full" disabled={feedbackLoading}>
+                        {feedbackLoading ? 'Submitting...' : 'Submit Feedback'}
+                      </Button>
+                    </form>
                   )}
                 </CardContent>
               </Card>
