@@ -315,9 +315,11 @@ export default function Registration() {
       setValue('sharedAccommodation', '');
       setValue('familyAccommodation', '');
       setValue('extraCharges', []);
-      paymentSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (nonAttendingType === 'NON_ATTENDING') {
+        paymentSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     }
-  }, [isNonAttendingMode, setValue]);
+  }, [isNonAttendingMode, nonAttendingType, setValue]);
 
   useEffect(() => {
     const PRICES = {
@@ -659,12 +661,13 @@ export default function Registration() {
                     type="radio"
                     name="attendanceType"
                     checked={nonAttendingType === 'NON_ATTENDING'}
-                    onChange={() =>
+                    onChange={() => {
                       setValue('nonAttendingType', 'NON_ATTENDING', {
                         shouldDirty: true,
                         shouldValidate: true,
-                      })
-                    }
+                      });
+                      paymentSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }}
                   />
                   Non attending devotee contribution - ₹ 2,000/-
                 </label>
