@@ -10,6 +10,7 @@ export const DEVOTEE_CATEGORY = [
 ];
 
 export const NON_ATTENDING_TYPE = [
+  { value: 'ATTENDING_NOT_STAYING', label: 'Attending but not staying - ₹ 3,500/-' },
   { value: 'NON_ATTENDING', label: 'Non attending devotee contribution - ₹ 2,000/-' },
 ];
 

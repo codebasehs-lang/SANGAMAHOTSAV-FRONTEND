@@ -224,7 +224,7 @@ export default function Registration() {
   const sharedAccommodation = watch('sharedAccommodation');
   const familyAccommodation = watch('familyAccommodation');
   const isBrahmachari = watch('devoteeCategory') === 'BRAHMACHARI';
-  const isNonAttendingMode = nonAttendingType === 'NON_ATTENDING';
+  const isNonAttendingMode = Boolean(nonAttendingType);
   const extraCharges = watch('extraCharges') || [];
   const watchedAge = watch('age');
   const watchedFamilyMembers = watch('familyMembers') || [];
@@ -247,8 +247,16 @@ export default function Registration() {
     // Accommodation part
     if (nonAttendingType === 'NON_ATTENDING') {
       parts.push('Non attending devotee contribution ₹2,000');
+    } else if (nonAttendingType === 'ATTENDING_NOT_STAYING') {
+      parts.push('Attending but not staying ₹3,500');
     } else {
-      const PRICES = { DORMITORY: 5000, NON_AC_SHARING: 6000, AC_SHARING: 7000, DELUXE_AC: 18000, PREMIUM_AC: 19500 };
+      const PRICES = {
+        DORMITORY: 5000,
+        NON_AC_SHARING: 6000,
+        AC_SHARING: 7000,
+        DELUXE_AC: 18000,
+        PREMIUM_AC: 19500,
+      };
       const accom = nonAttendingType || sharedAccommodation || familyAccommodation;
       if (accom && PRICES[accom]) parts.push(`Accommodation ₹${PRICES[accom].toLocaleString('en-IN')}`);
     }
@@ -313,6 +321,7 @@ export default function Registration() {
 
   useEffect(() => {
     const PRICES = {
+      ATTENDING_NOT_STAYING: 3500,
       NON_ATTENDING: 2000,
       DORMITORY: 5000,
       NON_AC_SHARING: 6000,
@@ -325,6 +334,8 @@ export default function Registration() {
 
     if (nonAttendingType === 'NON_ATTENDING') {
       total = PRICES.NON_ATTENDING;
+    } else if (nonAttendingType === 'ATTENDING_NOT_STAYING') {
+      total = PRICES.ATTENDING_NOT_STAYING;
     } else if (nonAttendingType) {
       total = PRICES[nonAttendingType] ?? 0;
     } else if (sharedAccommodation) {
@@ -647,7 +658,7 @@ export default function Registration() {
                   <input
                     type="radio"
                     name="attendanceType"
-                    checked={isNonAttendingMode}
+                    checked={nonAttendingType === 'NON_ATTENDING'}
                     onChange={() =>
                       setValue('nonAttendingType', 'NON_ATTENDING', {
                         shouldDirty: true,
@@ -657,9 +668,23 @@ export default function Registration() {
                   />
                   Non attending devotee contribution - ₹ 2,000/-
                 </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="attendanceType"
+                    checked={nonAttendingType === 'ATTENDING_NOT_STAYING'}
+                    onChange={() =>
+                      setValue('nonAttendingType', 'ATTENDING_NOT_STAYING', {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      })
+                    }
+                  />
+                  Attending but not staying - ₹ 3,500/-
+                </label>
               </div>
               <p className="text-xs text-emerald-800">
-                Choosing non attending skips accommodation selection and moves you to payment.
+                Choosing a no-stay option skips accommodation selection and moves you to payment.
               </p>
             </div>
           </CardContent>
