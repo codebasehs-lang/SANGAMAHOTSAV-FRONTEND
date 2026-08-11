@@ -90,52 +90,63 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 
-const schema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  age: z.coerce.number().min(0).max(120),
-  initiatedName: z.string().optional(),
-  devoteeCategory: z.enum(['DISCIPLE', 'NON_DISCIPLE', 'BRAHMACHARI']),
-  gender: z.enum(['MALE', 'FEMALE'], { required_error: 'Gender is required' }),
-  familyMembers: z
-    .array(
-      z.object({
-        name: z.string().optional(),
-        age: z.coerce.number().min(0).max(120).optional(),
-        devoteeCategory: z.string().min(1, 'Category is required'),
-        gender: z.string().min(1, 'Gender is required'),
-      })
-    )
-    .optional(),
-  mobileNumber: z.string().regex(/^[0-9]{10,15}$/, 'Enter a valid 10-15 digit number'),
-  comingFrom: z.string().min(1, 'This field is required'),
-  facilitatorName: z.string().optional(),
-  arrivalDate: z.string().optional(),
-  arrivalTime: z.string().optional(),
-  nonAttendingType: z.string().optional(),
-  sharedAccommodation: z.string().optional(),
-  familyAccommodation: z.string().optional(),
-  additionalFamilyAccommodation: z.string().optional(),
-  departureDate: z.string().optional(),
-  departureTime: z.string().optional(),
-  needJourneyPrasad: z.boolean().optional(),
-  preferredSubject: z.string().optional(),
-  preferredSubjectOther: z.string().optional(),
-  services: z.array(z.string()).max(2, 'You can select up to 2 services only').optional(),
-  ownFourWheeler: z.boolean().optional(),
-  extraCharges: z.array(z.string()).optional(),
-  selectedDonations: z.array(z.string()).optional(),
-  customDonationAmount: z.string().optional(),
-  customDonationPurpose: z.string().optional(),
-  customDonationPurposeAmount: z.string().optional(),
-  amountPaid: z.coerce.number({
-    required_error: 'Amount paid is required',
-    invalid_type_error: 'Amount paid is required',
-  }).min(0, 'Amount paid must be at least 0'),
-  paymentReferenceId: z.string().max(100).optional(),
-  payeeAccountName: z.string().max(150).optional(),
-  paymentScreenshot: z.any().optional(),
-  comments: z.string().optional(),
-});
+const schema = z
+  .object({
+    name: z.string().min(1, 'Name is required'),
+    age: z.coerce.number().min(0).max(120),
+    initiatedName: z.string().optional(),
+    devoteeCategory: z.enum(['DISCIPLE', 'NON_DISCIPLE', 'BRAHMACHARI']),
+    gender: z.enum(['MALE', 'FEMALE'], { required_error: 'Gender is required' }),
+    familyMembers: z
+      .array(
+        z.object({
+          name: z.string().optional(),
+          age: z.coerce.number().min(0).max(120).optional(),
+          devoteeCategory: z.string().min(1, 'Category is required'),
+          gender: z.string().min(1, 'Gender is required'),
+        })
+      )
+      .optional(),
+    mobileNumber: z.string().regex(/^[0-9]{10,15}$/, 'Enter a valid 10-15 digit number'),
+    comingFrom: z.string().min(1, 'This field is required'),
+    facilitatorName: z.string().optional(),
+    arrivalDate: z.string().optional(),
+    arrivalTime: z.string().optional(),
+    nonAttendingType: z.string().optional(),
+    sharedAccommodation: z.string().optional(),
+    familyAccommodation: z.string().optional(),
+    additionalFamilyAccommodation: z.string().optional(),
+    departureDate: z.string().optional(),
+    departureTime: z.string().optional(),
+    needJourneyPrasad: z.boolean().optional(),
+    preferredSubject: z.string().optional(),
+    preferredSubjectOther: z.string().optional(),
+    services: z.array(z.string()).max(2, 'You can select up to 2 services only').optional(),
+    ownFourWheeler: z.boolean().optional(),
+    extraCharges: z.array(z.string()).optional(),
+    selectedDonations: z.array(z.string()).optional(),
+    customDonationAmount: z.string().optional(),
+    customDonationPurpose: z.string().optional(),
+    customDonationPurposeAmount: z.string().optional(),
+    amountPaid: z.coerce.number({
+      required_error: 'Amount paid is required',
+      invalid_type_error: 'Amount paid is required',
+    }).min(0, 'Amount paid must be at least 0'),
+    paymentReferenceId: z.string().max(100).optional(),
+    payeeAccountName: z.string().max(150).optional(),
+    paymentScreenshot: z.any().optional(),
+    comments: z.string().optional(),
+  })
+  .superRefine((values, ctx) => {
+    if (values.devoteeCategory === 'BRAHMACHARI') return;
+    if (values.paymentScreenshot instanceof File) return;
+
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['paymentScreenshot'],
+      message: 'Payment screenshot is required for this registration category.',
+    });
+  });
 
 function Field({ label, error, required, children }) {
   return (
@@ -180,6 +191,7 @@ export default function Registration() {
   const [screenshotPreview, setScreenshotPreview] = useState(null);
   const [showQrModal, setShowQrModal] = useState(false);
   const [showMapModal, setShowMapModal] = useState(false);
+  const [availabilityRows, setAvailabilityRows] = useState([]);
   const arrivalDatePickerRef = useRef(null);
   const departureDatePickerRef = useRef(null);
   const paymentSectionRef = useRef(null);
@@ -220,6 +232,7 @@ export default function Registration() {
 
   const preferredSubject = watch('preferredSubject');
   const selectedServices = watch('services') || [];
+  const gender = watch('gender');
   const nonAttendingType = watch('nonAttendingType');
   const sharedAccommodation = watch('sharedAccommodation');
   const familyAccommodation = watch('familyAccommodation');
@@ -239,6 +252,23 @@ export default function Registration() {
     (sum, opt) => (extraCharges.includes(opt.value) ? sum + opt.amount : sum),
     0
   );
+
+  const dormitoryAvailability = availabilityRows.find(
+    (row) => row.accommodationType === 'DORMITORY' && row.gender === gender
+  );
+  const isDormitoryClosed = Boolean(gender && dormitoryAvailability && !dormitoryAvailability.isOpen);
+  const dormitoryClosedMessage =
+    dormitoryAvailability?.statusMessage ||
+    'Dormitory is currently full for the selected category. Please choose another accommodation option.';
+
+  useEffect(() => {
+    api
+      .get('/accommodations/availability/public')
+      .then(({ data }) => setAvailabilityRows(data.data || []))
+      .catch(() => {
+        setAvailabilityRows([]);
+      });
+  }, []);
 
   // Comprehensive breakdown of all amount components shown below the total field
   const nonAttendingBreakdown = (() => {
@@ -320,6 +350,15 @@ export default function Registration() {
       }
     }
   }, [isNonAttendingMode, nonAttendingType, setValue]);
+
+  useEffect(() => {
+    if (sharedAccommodation === 'DORMITORY' && isDormitoryClosed) {
+      setValue('sharedAccommodation', '', {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+  }, [sharedAccommodation, isDormitoryClosed, setValue]);
 
   useEffect(() => {
     const PRICES = {
@@ -541,21 +580,32 @@ export default function Registration() {
   return (
     <div className="container max-w-5xl py-10">
       {showErrorToast && serverError && (
-        <div className="fixed right-4 top-20 z-50 w-[min(92vw,520px)] rounded-lg border border-destructive/40 bg-white p-3 shadow-xl">
-          <div className="flex items-start gap-2">
-            <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-destructive">Submission error</p>
-              <p className="mt-0.5 break-words text-sm text-destructive">{serverError}</p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6 backdrop-blur-[2px]">
+          <div className="w-full max-w-2xl rounded-2xl border border-red-300 bg-gradient-to-br from-white via-red-50 to-orange-50 p-5 shadow-[0_24px_80px_rgba(127,29,29,0.28)] sm:p-7">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-red-100 ring-8 ring-red-100/70 sm:h-14 sm:w-14">
+                <CircleAlert className="h-6 w-6 text-red-600 sm:h-7 sm:w-7" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xl font-bold tracking-tight text-red-700 sm:text-2xl">
+                  Registration could not be submitted
+                </p>
+                <p className="mt-3 break-words text-base font-semibold leading-7 text-red-900 sm:text-lg">
+                  {serverError}
+                </p>
+                <p className="mt-4 text-sm font-medium text-red-700/90 sm:text-base">
+                  Please correct the accommodation selection or the highlighted issue, then submit the form again.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowErrorToast(false)}
+                className="rounded-full p-2 text-red-500 transition hover:bg-red-100 hover:text-red-700"
+                aria-label="Close error popup"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => setShowErrorToast(false)}
-              className="rounded p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground"
-              aria-label="Close error popup"
-            >
-              <X className="h-4 w-4" />
-            </button>
           </div>
         </div>
       )}
@@ -951,9 +1001,14 @@ export default function Registration() {
                 options={DORMITORY_OPTION ? [DORMITORY_OPTION] : []}
                 selectedValue={selectedAccommodation}
                 onSelect={selectAccommodation}
-                disabled={isBrahmachari || isNonAttendingMode}
+                disabled={isBrahmachari || isNonAttendingMode || isDormitoryClosed}
                 error={errors.sharedAccommodation}
               />
+              {isDormitoryClosed && (
+                <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                  {dormitoryClosedMessage}
+                </div>
+              )}
               <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
                 <p className="text-sm font-semibold text-amber-800">
                   📢 Important Note — Dormitory (Prabhuji &amp; Mataji)
@@ -1272,16 +1327,28 @@ export default function Registration() {
                 placeholder="Name as it appears in your bank account"
               />
             </Field>
-            <Field label="Payment Screenshot" error={errors.paymentScreenshot}>
+            <Field
+              label="Payment Screenshot"
+              required={!isBrahmachari}
+              error={errors.paymentScreenshot}
+            >
               <Input
                 type="file"
                 accept="image/*"
                 onChange={(e) => {
                   const file = e.target.files?.[0] ?? null;
-                  setValue('paymentScreenshot', file || undefined);
+                  setValue('paymentScreenshot', file || undefined, {
+                    shouldDirty: true,
+                    shouldValidate: true,
+                  });
                   setScreenshotPreview(file ? URL.createObjectURL(file) : null);
                 }}
               />
+              <p className="text-xs text-muted-foreground">
+                {isBrahmachari
+                  ? 'Optional for Brahmachari registration.'
+                  : 'Mandatory for all registrations except Brahmachari.'}
+              </p>
               {screenshotPreview && (
                 <img
                   src={screenshotPreview}

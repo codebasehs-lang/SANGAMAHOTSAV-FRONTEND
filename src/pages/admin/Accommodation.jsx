@@ -41,6 +41,12 @@ const ROOM_TYPE_OPTIONS = [
   ...NON_ATTENDING_TYPE,
 ];
 
+const GENDER_LABEL = {
+  ALL: 'All devotees',
+  MALE: 'Prabhuji',
+  FEMALE: 'Mataji',
+};
+
 /** Returns the label of whichever PRIMARY accommodation preference the devotee selected (excluding additional). */
 function getRoomType(reg) {
   const value =
@@ -54,8 +60,12 @@ function getRoomType(reg) {
 export default function Accommodation() {
   const { isViewer } = useAuth();
   const [rows, setRows] = useState([]);
+  const [availabilityRows, setAvailabilityRows] = useState([]);
   const [meta, setMeta] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [availabilityLoading, setAvailabilityLoading] = useState(true);
+  const [availabilitySavingId, setAvailabilitySavingId] = useState(null);
+  const [availabilityError, setAvailabilityError] = useState('');
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
   const [page, setPage] = useState(1);
@@ -87,6 +97,10 @@ export default function Accommodation() {
   }, [load]);
 
   useEffect(() => {
+    loadAvailability();
+  }, []);
+
+  useEffect(() => {
     api
       .get('/hotels')
       .then(({ data }) => setHotels(data.data))
@@ -94,6 +108,43 @@ export default function Accommodation() {
         /* handled via UI */
       });
   }, []);
+
+  async function loadAvailability() {
+    setAvailabilityLoading(true);
+    setAvailabilityError('');
+    try {
+      const { data } = await api.get('/accommodations/availability');
+      setAvailabilityRows(data.data || []);
+    } catch (err) {
+      setAvailabilityError(getErrorMessage(err));
+    } finally {
+      setAvailabilityLoading(false);
+    }
+  }
+
+  function updateAvailabilityDraft(id, patch) {
+    setAvailabilityRows((current) =>
+      current.map((row) => (row.id === id ? { ...row, ...patch } : row))
+    );
+  }
+
+  async function saveAvailability(row) {
+    setAvailabilitySavingId(row.id);
+    setAvailabilityError('');
+    try {
+      const { data } = await api.put(`/accommodations/availability/${row.id}`, {
+        isOpen: row.isOpen,
+        statusMessage: row.statusMessage?.trim() || null,
+      });
+      setAvailabilityRows((current) =>
+        current.map((item) => (item.id === row.id ? data.data : item))
+      );
+    } catch (err) {
+      setAvailabilityError(getErrorMessage(err));
+    } finally {
+      setAvailabilitySavingId(null);
+    }
+  }
 
   function openAssign(reg) {
     setActive(reg);
@@ -144,6 +195,90 @@ export default function Accommodation() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Hotel & Room Assignment</h1>
+
+      <Card>
+        <CardContent className="space-y-4 pt-6">
+          <div>
+            <h2 className="text-lg font-semibold">Accommodation Availability</h2>
+            <p className="text-sm text-muted-foreground">
+              Manually open or close accommodation options before devotees submit the registration form.
+            </p>
+          </div>
+
+          {availabilityError && (
+            <div className="rounded-md border border-destructive/50 bg-destructive/10 p-2 text-sm text-destructive">
+              {availabilityError}
+            </div>
+          )}
+
+          {availabilityLoading ? (
+            <div className="flex justify-center py-6">
+              <Spinner className="h-5 w-5 text-primary" />
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {availabilityRows.map((row) => {
+                const optionLabel =
+                  ROOM_TYPE_OPTIONS.find((option) => option.value === row.accommodationType)
+                    ?.label || row.accommodationType;
+                const isSaving = availabilitySavingId === row.id;
+
+                return (
+                  <div
+                    key={row.id}
+                    className="grid gap-3 rounded-lg border p-4 lg:grid-cols-[minmax(0,1.2fr)_12rem_minmax(0,1.5fr)_auto]"
+                  >
+                    <div>
+                      <p className="font-medium">{optionLabel}</p>
+                      <p className="text-xs text-muted-foreground">{row.accommodationType}</p>
+                    </div>
+
+                    <div>
+                      <Label className="text-xs">Applies To</Label>
+                      <p className="mt-2 text-sm">{GENDER_LABEL[row.gender] || row.gender}</p>
+                    </div>
+
+                    <div className="space-y-3">
+                      <label className="flex items-center gap-2 text-sm font-medium">
+                        <input
+                          type="checkbox"
+                          checked={row.isOpen}
+                          disabled={isViewer || isSaving}
+                          onChange={(e) =>
+                            updateAvailabilityDraft(row.id, { isOpen: e.target.checked })
+                          }
+                        />
+                        Open for registration
+                      </label>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Closed message</Label>
+                        <Input
+                          value={row.statusMessage || ''}
+                          disabled={isViewer || isSaving}
+                          onChange={(e) =>
+                            updateAvailabilityDraft(row.id, { statusMessage: e.target.value })
+                          }
+                          placeholder="Shown on the public registration form when this option is closed"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-end justify-end">
+                      {isViewer ? (
+                        <span className="text-xs text-muted-foreground">View Only</span>
+                      ) : (
+                        <Button onClick={() => saveAvailability(row)} disabled={isSaving}>
+                          {isSaving ? 'Saving...' : 'Save'}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardContent className="flex flex-wrap items-end gap-3 pt-6">
