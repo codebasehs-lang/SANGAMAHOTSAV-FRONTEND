@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Search, BedDouble } from 'lucide-react';
+import { Search, BedDouble, ChevronDown, ChevronUp } from 'lucide-react';
 
 import api, { getErrorMessage } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
@@ -47,6 +47,12 @@ const GENDER_LABEL = {
   FEMALE: 'Mataji',
 };
 
+const GROUP_LABELS = {
+  DORMITORY: 'Dormitory Controls',
+  SHARED: 'Shared Room Controls',
+  FAMILY: 'Family Room Controls',
+};
+
 /** Returns the label of whichever PRIMARY accommodation preference the devotee selected (excluding additional). */
 function getRoomType(reg) {
   const value =
@@ -61,6 +67,7 @@ export default function Accommodation() {
   const { isViewer } = useAuth();
   const [rows, setRows] = useState([]);
   const [availabilityRows, setAvailabilityRows] = useState([]);
+  const [availabilityPanelOpen, setAvailabilityPanelOpen] = useState(false);
   const [meta, setMeta] = useState(null);
   const [loading, setLoading] = useState(true);
   const [availabilityLoading, setAvailabilityLoading] = useState(true);
@@ -192,91 +199,191 @@ export default function Accommodation() {
     }
   }
 
+  const closedRows = availabilityRows.filter((row) => !row.isOpen);
+  const openRowsCount = availabilityRows.length - closedRows.length;
+  const groupedAvailabilityRows = {
+    DORMITORY: availabilityRows.filter((row) => row.accommodationType === 'DORMITORY'),
+    SHARED: availabilityRows.filter(
+      (row) =>
+        row.accommodationType !== 'DORMITORY' &&
+        SHARED_ACCOMMODATION.some((option) => option.value === row.accommodationType)
+    ),
+    FAMILY: availabilityRows.filter((row) =>
+      FAMILY_ACCOMMODATION.some((option) => option.value === row.accommodationType)
+    ),
+  };
+
+  function renderAvailabilityCard(row) {
+    const optionLabel =
+      ROOM_TYPE_OPTIONS.find((option) => option.value === row.accommodationType)?.label ||
+      row.accommodationType;
+    const isSaving = availabilitySavingId === row.id;
+
+    return (
+      <div
+        key={row.id}
+        className={`rounded-xl border p-4 shadow-sm transition-colors ${
+          row.isOpen
+            ? 'border-emerald-200 bg-white'
+            : 'border-rose-200 bg-rose-50/70'
+        }`}
+      >
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="font-semibold text-slate-900">{optionLabel}</p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+                {GENDER_LABEL[row.gender] || row.gender}
+              </span>
+              <span
+                className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                  row.isOpen
+                    ? 'bg-emerald-100 text-emerald-700'
+                    : 'bg-rose-100 text-rose-700'
+                }`}
+              >
+                {row.isOpen ? 'Open' : 'Closed'}
+              </span>
+            </div>
+          </div>
+
+          <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+            <input
+              type="checkbox"
+              checked={row.isOpen}
+              disabled={isViewer || isSaving}
+              onChange={(e) =>
+                updateAvailabilityDraft(row.id, { isOpen: e.target.checked })
+              }
+            />
+            Open for registration
+          </label>
+        </div>
+
+        <div className="mt-4 space-y-1.5">
+          <Label className="text-xs uppercase tracking-wide text-slate-500">Closed message</Label>
+          <Input
+            value={row.statusMessage || ''}
+            disabled={isViewer || isSaving}
+            onChange={(e) =>
+              updateAvailabilityDraft(row.id, { statusMessage: e.target.value })
+            }
+            placeholder="Shown on the public registration form when this option is closed"
+            className="bg-white"
+          />
+        </div>
+
+        <div className="mt-4 flex justify-end">
+          {isViewer ? (
+            <span className="text-xs text-muted-foreground">View Only</span>
+          ) : (
+            <Button onClick={() => saveAvailability(row)} disabled={isSaving}>
+              {isSaving ? 'Saving...' : 'Save'}
+            </Button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Hotel & Room Assignment</h1>
 
       <Card>
-        <CardContent className="space-y-4 pt-6">
-          <div>
-            <h2 className="text-lg font-semibold">Accommodation Availability</h2>
-            <p className="text-sm text-muted-foreground">
-              Manually open or close accommodation options before devotees submit the registration form.
-            </p>
-          </div>
+        <CardContent className="pt-6">
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-amber-50 shadow-sm">
+            <button
+              type="button"
+              onClick={() => setAvailabilityPanelOpen((current) => !current)}
+              className="flex w-full items-start justify-between gap-4 px-5 py-5 text-left transition hover:bg-slate-50/70 sm:px-6"
+            >
+              <div className="space-y-3">
+                <div>
+                  <p className="text-lg font-semibold text-slate-900">Accommodation Controls</p>
+                  <p className="text-sm text-slate-600">
+                    Open or close accommodation options before devotees submit the registration form.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+                    {openRowsCount} open
+                  </span>
+                  <span className="rounded-full bg-rose-100 px-3 py-1 text-xs font-semibold text-rose-700">
+                    {closedRows.length} closed
+                  </span>
+                  {closedRows.slice(0, 3).map((row) => (
+                    <span
+                      key={row.id}
+                      className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800"
+                    >
+                      {(ROOM_TYPE_OPTIONS.find((option) => option.value === row.accommodationType)?.label ||
+                        row.accommodationType)
+                        .split(' - ')[0]} {GENDER_LABEL[row.gender] || row.gender} closed
+                    </span>
+                  ))}
+                </div>
+              </div>
 
-          {availabilityError && (
-            <div className="rounded-md border border-destructive/50 bg-destructive/10 p-2 text-sm text-destructive">
-              {availabilityError}
-            </div>
-          )}
+              <div className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm">
+                {availabilityPanelOpen ? (
+                  <ChevronUp className="h-5 w-5" />
+                ) : (
+                  <ChevronDown className="h-5 w-5" />
+                )}
+              </div>
+            </button>
 
-          {availabilityLoading ? (
-            <div className="flex justify-center py-6">
-              <Spinner className="h-5 w-5 text-primary" />
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {availabilityRows.map((row) => {
-                const optionLabel =
-                  ROOM_TYPE_OPTIONS.find((option) => option.value === row.accommodationType)
-                    ?.label || row.accommodationType;
-                const isSaving = availabilitySavingId === row.id;
+            {availabilityPanelOpen && (
+              <div className="border-t border-slate-200 px-5 py-5 sm:px-6">
+                <div className="mb-4 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+                  Use this panel to quickly stop one category, such as Mataji dormitory, without affecting the room assignment workflow below.
+                </div>
 
-                return (
-                  <div
-                    key={row.id}
-                    className="grid gap-3 rounded-lg border p-4 lg:grid-cols-[minmax(0,1.2fr)_12rem_minmax(0,1.5fr)_auto]"
-                  >
-                    <div>
-                      <p className="font-medium">{optionLabel}</p>
-                      <p className="text-xs text-muted-foreground">{row.accommodationType}</p>
-                    </div>
-
-                    <div>
-                      <Label className="text-xs">Applies To</Label>
-                      <p className="mt-2 text-sm">{GENDER_LABEL[row.gender] || row.gender}</p>
-                    </div>
-
-                    <div className="space-y-3">
-                      <label className="flex items-center gap-2 text-sm font-medium">
-                        <input
-                          type="checkbox"
-                          checked={row.isOpen}
-                          disabled={isViewer || isSaving}
-                          onChange={(e) =>
-                            updateAvailabilityDraft(row.id, { isOpen: e.target.checked })
-                          }
-                        />
-                        Open for registration
-                      </label>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs">Closed message</Label>
-                        <Input
-                          value={row.statusMessage || ''}
-                          disabled={isViewer || isSaving}
-                          onChange={(e) =>
-                            updateAvailabilityDraft(row.id, { statusMessage: e.target.value })
-                          }
-                          placeholder="Shown on the public registration form when this option is closed"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex items-end justify-end">
-                      {isViewer ? (
-                        <span className="text-xs text-muted-foreground">View Only</span>
-                      ) : (
-                        <Button onClick={() => saveAvailability(row)} disabled={isSaving}>
-                          {isSaving ? 'Saving...' : 'Save'}
-                        </Button>
-                      )}
-                    </div>
+                {availabilityError && (
+                  <div className="mb-4 rounded-md border border-destructive/50 bg-destructive/10 p-2 text-sm text-destructive">
+                    {availabilityError}
                   </div>
-                );
-              })}
-            </div>
-          )}
+                )}
+
+                {availabilityLoading ? (
+                  <div className="flex justify-center py-6">
+                    <Spinner className="h-5 w-5 text-primary" />
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {Object.entries(groupedAvailabilityRows).map(([groupKey, groupRows]) => {
+                      if (groupRows.length === 0) return null;
+
+                      return (
+                        <section key={groupKey} className="space-y-3">
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              <h2 className="text-base font-semibold text-slate-900">
+                                {GROUP_LABELS[groupKey] || groupKey}
+                              </h2>
+                              <p className="text-sm text-slate-500">
+                                {groupKey === 'DORMITORY'
+                                  ? 'Separate controls for Prabhuji and Mataji dormitory allocation.'
+                                  : 'Shared public availability settings for this accommodation group.'}
+                              </p>
+                            </div>
+                            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                              {groupRows.filter((row) => row.isOpen).length}/{groupRows.length} open
+                            </span>
+                          </div>
+
+                          <div className="grid gap-4 xl:grid-cols-2">
+                            {groupRows.map((row) => renderAvailabilityCard(row))}
+                          </div>
+                        </section>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 
