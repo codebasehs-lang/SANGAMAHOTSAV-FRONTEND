@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react';
 import { Plus, MapPin, Pencil, Trash2 } from 'lucide-react';
 
 import api, { getErrorMessage } from '@/lib/api';
+import { SHARED_ACCOMMODATION, FAMILY_ACCOMMODATION } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 import { Modal } from '@/components/ui/modal';
 import {
   Card,
@@ -16,6 +18,19 @@ import { FullPageSpinner } from '@/components/Spinner';
 import { useAuth } from '@/context/AuthContext';
 
 const EMPTY = { hotelName: '', hotelAddress: '', hotelMapLink: '' };
+const EMPTY_ROOM = {
+  roomNo: '',
+  roomType: 'DORMITORY',
+  roomCapacity: 1,
+  currentOccupancy: 0,
+  isActive: true,
+  notes: '',
+};
+
+const ROOM_TYPE_OPTIONS = [
+  ...SHARED_ACCOMMODATION,
+  ...FAMILY_ACCOMMODATION,
+];
 
 export default function Hotels() {
   const { isViewer } = useAuth();
@@ -26,6 +41,11 @@ export default function Hotels() {
   const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [roomOpen, setRoomOpen] = useState(false);
+  const [roomEditing, setRoomEditing] = useState(null);
+  const [roomHotel, setRoomHotel] = useState(null);
+  const [roomForm, setRoomForm] = useState(EMPTY_ROOM);
+  const [roomSaving, setRoomSaving] = useState(false);
 
   async function load() {
     try {
@@ -90,6 +110,68 @@ export default function Hotels() {
     }
   }
 
+  function openCreateRoom(hotel) {
+    setRoomHotel(hotel);
+    setRoomEditing(null);
+    setRoomForm(EMPTY_ROOM);
+    setError('');
+    setRoomOpen(true);
+  }
+
+  function openEditRoom(hotel, room) {
+    setRoomHotel(hotel);
+    setRoomEditing(room);
+    setRoomForm({
+      roomNo: room.roomNo || '',
+      roomType: room.roomType || 'DORMITORY',
+      roomCapacity: room.roomCapacity || 1,
+      currentOccupancy: room.currentOccupancy || 0,
+      isActive: Boolean(room.isActive),
+      notes: room.notes || '',
+    });
+    setError('');
+    setRoomOpen(true);
+  }
+
+  async function saveRoom() {
+    if (!roomHotel) return;
+    setRoomSaving(true);
+    setError('');
+    try {
+      const payload = {
+        ...roomForm,
+        roomCapacity: Number(roomForm.roomCapacity || 1),
+        currentOccupancy: Number(roomForm.currentOccupancy || 0),
+      };
+
+      if (roomEditing) {
+        await api.put(`/hotels/${roomHotel.id}/rooms/${roomEditing.id}`, payload);
+      } else {
+        await api.post(`/hotels/${roomHotel.id}/rooms`, payload);
+      }
+
+      setRoomOpen(false);
+      setRoomEditing(null);
+      setRoomHotel(null);
+      setRoomForm(EMPTY_ROOM);
+      load();
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setRoomSaving(false);
+    }
+  }
+
+  async function removeRoom(hotelId, roomId) {
+    if (!window.confirm('Delete this room?')) return;
+    try {
+      await api.delete(`/hotels/${hotelId}/rooms/${roomId}`);
+      load();
+    } catch (err) {
+      setError(getErrorMessage(err));
+    }
+  }
+
   if (loading) return <FullPageSpinner />;
 
   return (
@@ -114,10 +196,18 @@ export default function Hotels() {
         {hotels.map((h) => (
           <Card key={h.id}>
             <CardHeader className="flex-row items-start justify-between space-y-0">
-              <CardTitle className="text-base">{h.hotelName}</CardTitle>
+              <div>
+                <CardTitle className="text-base">{h.hotelName}</CardTitle>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Rooms: {h.rooms?.length || 0}
+                </p>
+              </div>
               <div className="flex gap-1">
                 {!isViewer && (
                   <>
+                    <Button size="sm" variant="outline" onClick={() => openCreateRoom(h)}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
                     <Button size="sm" variant="outline" onClick={() => openEdit(h)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
@@ -140,6 +230,53 @@ export default function Hotels() {
                   <MapPin className="h-4 w-4" /> View on Map
                 </a>
               )}
+
+              <div className="mt-3 rounded-md border">
+                <div className="grid grid-cols-[1fr_1fr_4rem_4rem_auto] gap-2 border-b bg-muted/40 px-3 py-2 text-xs font-semibold text-muted-foreground">
+                  <span>Room No</span>
+                  <span>Type</span>
+                  <span>Cap.</span>
+                  <span>Occ.</span>
+                  <span className="text-right">Actions</span>
+                </div>
+                <div className="divide-y">
+                  {(h.rooms || []).map((room) => (
+                    <div
+                      key={room.id}
+                      className="grid grid-cols-[1fr_1fr_4rem_4rem_auto] items-center gap-2 px-3 py-2 text-xs"
+                    >
+                      <span className="font-medium">{room.roomNo}</span>
+                      <span>{ROOM_TYPE_OPTIONS.find((r) => r.value === room.roomType)?.label || room.roomType}</span>
+                      <span>{room.roomCapacity}</span>
+                      <span className={room.currentOccupancy > room.roomCapacity ? 'text-amber-700 font-semibold' : ''}>
+                        {room.currentOccupancy}
+                      </span>
+                      <div className="flex justify-end gap-1">
+                        {!room.isActive && (
+                          <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600">
+                            Inactive
+                          </span>
+                        )}
+                        {!isViewer && (
+                          <>
+                            <Button size="sm" variant="outline" onClick={() => openEditRoom(h, room)}>
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => removeRoom(h.id, room.id)}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {(h.rooms || []).length === 0 && (
+                    <div className="px-3 py-2 text-xs text-muted-foreground">
+                      No rooms added yet.
+                    </div>
+                  )}
+                </div>
+              </div>
             </CardContent>
           </Card>
         ))}
@@ -186,6 +323,74 @@ export default function Hotels() {
             </Button>
             <Button onClick={save} disabled={saving}>
               {saving ? 'Saving...' : 'Save Hotel'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={roomOpen}
+        onClose={() => setRoomOpen(false)}
+        title={roomEditing ? `Edit Room — ${roomHotel?.hotelName || ''}` : `Add Room — ${roomHotel?.hotelName || ''}`}
+      >
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label>Room Number</Label>
+            <Input
+              value={roomForm.roomNo}
+              onChange={(e) => setRoomForm({ ...roomForm, roomNo: e.target.value })}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Room Type</Label>
+            <Select
+              options={ROOM_TYPE_OPTIONS}
+              value={roomForm.roomType}
+              onChange={(e) => setRoomForm({ ...roomForm, roomType: e.target.value })}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Room Capacity</Label>
+              <Input
+                type="number"
+                min={1}
+                value={roomForm.roomCapacity}
+                onChange={(e) => setRoomForm({ ...roomForm, roomCapacity: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Current Occupancy</Label>
+              <Input
+                type="number"
+                min={0}
+                value={roomForm.currentOccupancy}
+                onChange={(e) => setRoomForm({ ...roomForm, currentOccupancy: e.target.value })}
+              />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Notes</Label>
+            <Input
+              value={roomForm.notes}
+              onChange={(e) => setRoomForm({ ...roomForm, notes: e.target.value })}
+              placeholder="Optional"
+            />
+          </div>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={roomForm.isActive}
+              onChange={(e) => setRoomForm({ ...roomForm, isActive: e.target.checked })}
+            />
+            Room is active for assignment
+          </label>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setRoomOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={saveRoom} disabled={roomSaving}>
+              {roomSaving ? 'Saving...' : 'Save Room'}
             </Button>
           </div>
         </div>

@@ -32,6 +32,8 @@ const EMPTY = {
   hotelName: '',
   hotelAddress: '',
   roomNumber: '',
+  hotelRoomId: null,
+  assignedOccupancy: 1,
   hotelMapLink: '',
 };
 
@@ -81,6 +83,8 @@ export default function Accommodation() {
   const [form, setForm] = useState(EMPTY);
   const [hotels, setHotels] = useState([]);
   const [selectedHotel, setSelectedHotel] = useState('');
+  const [selectedRoomType, setSelectedRoomType] = useState('');
+  const [selectedRoom, setSelectedRoom] = useState('');
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
 
@@ -156,38 +160,119 @@ export default function Accommodation() {
   function openAssign(reg) {
     setActive(reg);
     setSelectedHotel('');
+    setSelectedRoomType('');
+    setSelectedRoom('');
     setForm(
       reg.assignment
         ? {
             hotelName: reg.assignment.hotelName || '',
             hotelAddress: reg.assignment.hotelAddress || '',
             roomNumber: reg.assignment.roomNumber || '',
+            hotelRoomId: reg.assignment.hotelRoomId || null,
+            assignedOccupancy: reg.assignment.assignedOccupancy || 1,
             hotelMapLink: reg.assignment.hotelMapLink || '',
           }
         : EMPTY
     );
+
+    if (reg.assignment?.hotelRoom?.hotelId) {
+      setSelectedHotel(String(reg.assignment.hotelRoom.hotelId));
+      setSelectedRoomType(reg.assignment.hotelRoom.roomType || '');
+      setSelectedRoom(String(reg.assignment.hotelRoom.id));
+    } else {
+      setSelectedRoomType(getExpectedRoomType(reg));
+    }
     setFormError('');
+  }
+
+  function getExpectedRoomType(reg) {
+    if (!reg) return '';
+    return reg.sharedAccommodation || reg.familyAccommodation || '';
+  }
+
+  function roomHasAvailableCapacity(room, currentAssignmentRoomId) {
+    if (!room) return false;
+    if (String(room.id) === String(currentAssignmentRoomId || '')) return true;
+    return Number(room.currentOccupancy || 0) < Number(room.roomCapacity || 0);
+  }
+
+  function getSuggestedOccupancy(reg) {
+    if (!reg) return 1;
+    const familyCount = Array.isArray(reg.familyMembers)
+      ? reg.familyMembers.filter((m) => m?.name).length
+      : 0;
+    return Math.max(1, 1 + familyCount);
   }
 
   function pickHotel(hotelId) {
     setSelectedHotel(hotelId);
+    const expectedType = getExpectedRoomType(active);
+    setSelectedRoomType(expectedType || '');
+    setSelectedRoom('');
     const hotel = hotels.find((h) => String(h.id) === String(hotelId));
     if (hotel) {
       setForm((prev) => ({
         ...prev,
         hotelName: hotel.hotelName || '',
         hotelAddress: hotel.hotelAddress || '',
+        hotelRoomId: null,
+        roomNumber: '',
         hotelMapLink: hotel.hotelMapLink || '',
       }));
     }
+  }
+
+  function pickRoomType(roomType) {
+    setSelectedRoomType(roomType);
+    setSelectedRoom('');
+    setForm((prev) => ({
+      ...prev,
+      hotelRoomId: null,
+      roomNumber: '',
+    }));
+  }
+
+  function pickRoom(roomId) {
+    setSelectedRoom(roomId);
+    const hotel = hotels.find((h) => String(h.id) === String(selectedHotel));
+    const room = hotel?.rooms?.find((r) => String(r.id) === String(roomId));
+    if (!hotel || !room) return;
+
+    setForm((prev) => ({
+      ...prev,
+      hotelName: hotel.hotelName || '',
+      hotelAddress: hotel.hotelAddress || '',
+      hotelRoomId: room.id,
+      roomNumber: room.roomNo || '',
+      hotelMapLink: hotel.hotelMapLink || '',
+    }));
   }
 
   async function save() {
     setSaving(true);
     setFormError('');
     try {
+      if (!selectedHotel) {
+        setFormError('Please select a hotel.');
+        return;
+      }
+      if (!selectedRoomType) {
+        setFormError('Please select a room type.');
+        return;
+      }
+      if (!selectedRoom) {
+        setFormError('Please select a room number with available capacity.');
+        return;
+      }
+      if (!Number(form.assignedOccupancy) || Number(form.assignedOccupancy) < 1) {
+        setFormError('Please enter a valid devotees count (minimum 1).');
+        return;
+      }
+
       await api.post(`/accommodations/${active.id}`, {
         ...form,
+        assignedOccupancy: Number(form.assignedOccupancy || 1),
+        hotelRoomId: selectedRoom ? Number(selectedRoom) : null,
         status: 'ASSIGNED',
       });
       setActive(null);
@@ -198,6 +283,51 @@ export default function Accommodation() {
       setSaving(false);
     }
   }
+
+  const selectedHotelData = hotels.find(
+    (h) => String(h.id) === String(selectedHotel)
+  );
+  const expectedRoomType = getExpectedRoomType(active);
+  const assignmentRoomId = active?.assignment?.hotelRoomId;
+  const roomTypeOptions = selectedHotelData
+    ? Array.from(
+        new Set(
+          (selectedHotelData.rooms || [])
+            .filter((room) => room.isActive)
+            .map((room) => room.roomType)
+        )
+      )
+        .filter((roomType) => !expectedRoomType || roomType === expectedRoomType)
+        .map((roomType) => ({
+          value: roomType,
+          label:
+            ROOM_TYPE_OPTIONS.find((option) => option.value === roomType)?.label || roomType,
+        }))
+    : [];
+  const roomOptions = (selectedHotelData?.rooms || [])
+    .filter((room) => room.isActive)
+    .filter((room) => !selectedRoomType || room.roomType === selectedRoomType)
+    .filter((room) => roomHasAvailableCapacity(room, assignmentRoomId))
+    .map((room) => ({
+      value: String(room.id),
+      label: `${room.roomNo} • ${room.currentOccupancy}/${room.roomCapacity}`,
+    }));
+  const selectedRoomData = (selectedHotelData?.rooms || []).find(
+    (room) => String(room.id) === String(selectedRoom)
+  );
+  const effectiveRoomOccupancy = selectedRoomData
+    ? String(selectedRoomData.id) === String(assignmentRoomId || '')
+      ? Math.max(
+          0,
+          Number(selectedRoomData.currentOccupancy || 0) -
+            Number(active?.assignment?.assignedOccupancy || 1)
+        )
+      : Number(selectedRoomData.currentOccupancy || 0)
+    : 0;
+  const roomRemainingCapacity = selectedRoomData
+    ? Math.max(0, Number(selectedRoomData.roomCapacity || 0) - effectiveRoomOccupancy)
+    : 0;
+  const suggestedOccupancy = getSuggestedOccupancy(active);
 
   const closedRows = availabilityRows.filter((row) => !row.isOpen);
   const openRowsCount = availabilityRows.length - closedRows.length;
@@ -509,6 +639,63 @@ export default function Accommodation() {
               />
             </div>
           )}
+          {selectedHotel && (
+            <div className="space-y-1.5">
+              <Label>Room Type</Label>
+              <Select
+                options={roomTypeOptions}
+                placeholder={
+                  expectedRoomType
+                    ? 'No matching room types available in this hotel'
+                    : 'Choose room type...'
+                }
+                value={selectedRoomType}
+                onChange={(e) => pickRoomType(e.target.value)}
+              />
+              {expectedRoomType && (
+                <p className="text-xs text-muted-foreground">
+                  Expected from registration preference: {ROOM_TYPE_OPTIONS.find((option) => option.value === expectedRoomType)?.label || expectedRoomType}
+                </p>
+              )}
+            </div>
+          )}
+          {selectedHotel && selectedRoomType && (
+            <div className="space-y-1.5">
+              <Label>Room Number</Label>
+              <Select
+                options={roomOptions}
+                placeholder={
+                  roomOptions.length
+                    ? 'Choose available room...'
+                    : 'No active room with available capacity'
+                }
+                value={selectedRoom}
+                onChange={(e) => pickRoom(e.target.value)}
+              />
+            </div>
+          )}
+          <div className="space-y-1.5">
+            <Label>Devotees To Assign In This Room</Label>
+            <Input
+              type="number"
+              min={1}
+              value={form.assignedOccupancy}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  assignedOccupancy: e.target.value,
+                })
+              }
+            />
+            <p className="text-xs text-muted-foreground">
+              Suggested for this registration: {suggestedOccupancy} devotee(s).
+            </p>
+            {selectedRoomData && (
+              <p className="text-xs text-muted-foreground">
+                Remaining capacity in selected room: {roomRemainingCapacity} (capacity {selectedRoomData.roomCapacity}, current {effectiveRoomOccupancy}).
+              </p>
+            )}
+          </div>
           <div className="space-y-1.5">
             <Label>Hotel Name</Label>
             <Input

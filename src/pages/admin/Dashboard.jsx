@@ -64,8 +64,9 @@ export default function Dashboard() {
               <p className="text-2xl font-bold">{summary?.totalRegistrations ?? 0}</p>
               <p className="text-sm text-muted-foreground">Total Registrations</p>
               <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
-                <span>Disciple: <span className="font-semibold text-foreground">{summary?.discipleRegistrations ?? 0}</span></span>
-                <span>Non-Disciple: <span className="font-semibold text-foreground">{summary?.nonDiscipleRegistrations ?? 0}</span></span>
+                <span>Disciple registrations: <span className="font-semibold text-foreground">{summary?.discipleRegistrations ?? 0}</span></span>
+                <span>Non-Disciple registrations: <span className="font-semibold text-foreground">{summary?.nonDiscipleRegistrations ?? 0}</span></span>
+                <span>Brahmachari registrations: <span className="font-semibold text-foreground">{summary?.brahmachariRegistrations ?? 0}</span></span>
                 <span>Attendees (incl. family): <span className="font-semibold text-foreground">{summary?.totalAttendees ?? 0}</span></span>
                 <span>Adults: <span className="font-semibold text-foreground">{summary?.totalAdults ?? 0}</span></span>
                 <span>Children: <span className="font-semibold text-foreground">{summary?.totalChildren ?? 0}</span></span>
