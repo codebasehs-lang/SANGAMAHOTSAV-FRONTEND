@@ -67,9 +67,11 @@ export default function Dashboard() {
                 <span>Disciple registrations: <span className="font-semibold text-foreground">{summary?.discipleRegistrations ?? 0}</span></span>
                 <span>Non-Disciple registrations: <span className="font-semibold text-foreground">{summary?.nonDiscipleRegistrations ?? 0}</span></span>
                 <span>Brahmachari registrations: <span className="font-semibold text-foreground">{summary?.brahmachariRegistrations ?? 0}</span></span>
-                <span>Attendees (incl. family): <span className="font-semibold text-foreground">{summary?.totalAttendees ?? 0}</span></span>
                 <span>Adults: <span className="font-semibold text-foreground">{summary?.totalAdults ?? 0}</span></span>
                 <span>Children: <span className="font-semibold text-foreground">{summary?.totalChildren ?? 0}</span></span>
+                <span>Prabhuji (male): <span className="font-semibold text-foreground">{summary?.maleCount ?? 0}</span></span>
+                <span>Mataji (female): <span className="font-semibold text-foreground">{summary?.femaleCount ?? 0}</span></span>
+                <span>Total Attendees: <span className="font-semibold text-foreground">{summary?.totalAttendees ?? 0}</span></span>
               </div>
             </div>
           </CardContent>
