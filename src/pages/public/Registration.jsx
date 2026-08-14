@@ -4,9 +4,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Plus, Trash2, CheckCircle2, CircleAlert, X, MapPin, CalendarDays } from 'lucide-react';
 
+import { Country, State, City } from 'country-state-city';
 import api, { getErrorMessage } from '@/lib/api';
+
 import {
   DEVOTEE_CATEGORY,
+  DEVOTEE_ASHRAM,
   NON_ATTENDING_TYPE,
   SHARED_ACCOMMODATION,
   FAMILY_ACCOMMODATION,
@@ -17,6 +20,8 @@ import {
   EVENT_INFO,
   DONATION_ITEMS,
 } from '@/lib/constants';
+
+const ALL_COUNTRIES = Country.getAllCountries().map((c) => ({ value: c.isoCode, label: c.name }));
 
 const DORMITORY_OPTION = SHARED_ACCOMMODATION.find((opt) => opt.value === 'DORMITORY');
 const SHARED_ACCOMMODATION_PER_DEVOTEE = SHARED_ACCOMMODATION.filter((opt) => opt.value !== 'DORMITORY');
@@ -92,10 +97,15 @@ import {
 
 const schema = z
   .object({
-    name: z.string().min(1, 'Name is required'),
+    name: z
+      .string()
+      .min(1, 'Name is required')
+      .max(150, 'Name must be at most 150 characters')
+      .regex(/^[a-zA-Z .'`-]+$/, "Name can only contain letters, spaces, dots, hyphens and apostrophes"),
     age: z.coerce.number().min(0).max(120),
     initiatedName: z.string().optional(),
-    devoteeCategory: z.enum(['DISCIPLE', 'NON_DISCIPLE', 'BRAHMACHARI']),
+    devoteeCategory: z.enum(['DISCIPLE', 'NON_DISCIPLE', 'BRAHMACHARI', 'ASPIRING', 'FOLLOWER']),
+    devoteeAshram: z.enum(['GRIHASTHA', 'BRAHMACHARI', 'ASPIRING']).optional(),
     gender: z.enum(['MALE', 'FEMALE'], { required_error: 'Gender is required' }),
     familyMembers: z
       .array(
@@ -108,7 +118,11 @@ const schema = z
       )
       .optional(),
     mobileNumber: z.string().regex(/^[0-9]{10,15}$/, 'Enter a valid 10-15 digit number'),
+    email: z.string().email('Enter a valid email address').min(1, 'Email ID is required'),
     comingFrom: z.string().min(1, 'This field is required'),
+    country: z.string().min(1, 'Country is required'),
+    state: z.string().min(1, 'State is required'),
+    district: z.string().min(1, 'District is required'),
     facilitatorName: z.string().optional(),
     arrivalDate: z.string().optional(),
     arrivalTime: z.string().optional(),
@@ -138,13 +152,14 @@ const schema = z
     comments: z.string().optional(),
   })
   .superRefine((values, ctx) => {
-    if (values.devoteeCategory === 'BRAHMACHARI') return;
+    // Brahmachari with zero amount has no payment, so screenshot is optional
+    if (values.devoteeAshram === 'BRAHMACHARI' && !(values.amountPaid > 0)) return;
     if (values.paymentScreenshot instanceof File) return;
 
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['paymentScreenshot'],
-      message: 'Payment screenshot is required for this registration category.',
+      message: 'Payment screenshot is required when an amount is payable.',
     });
   });
 
@@ -236,7 +251,20 @@ export default function Registration() {
   const nonAttendingType = watch('nonAttendingType');
   const sharedAccommodation = watch('sharedAccommodation');
   const familyAccommodation = watch('familyAccommodation');
-  const isBrahmachari = watch('devoteeCategory') === 'BRAHMACHARI';
+  const isBrahmachari = watch('devoteeAshram') === 'BRAHMACHARI';
+  const watchedAmountPaid = watch('amountPaid') || 0;
+  const screenshotRequired = !isBrahmachari || watchedAmountPaid > 0;
+  const watchedCountry = watch('country');
+  const watchedState = watch('state');
+  const stateOptions = watchedCountry
+    ? State.getStatesOfCountry(watchedCountry).map((s) => ({ value: s.name, label: s.name }))
+    : [];
+  const districtOptions = (() => {
+    if (!watchedCountry || !watchedState) return [];
+    const stateObj = State.getStatesOfCountry(watchedCountry).find((s) => s.name === watchedState);
+    if (!stateObj) return [];
+    return City.getCitiesOfState(watchedCountry, stateObj.isoCode).map((c) => ({ value: c.name, label: c.name }));
+  })();
   const isNonAttendingMode = Boolean(nonAttendingType);
   const extraCharges = watch('extraCharges') || [];
   const watchedAge = watch('age');
@@ -399,11 +427,7 @@ export default function Registration() {
     total += donationTotal;
     total += extraChargesTotal;
 
-    if (total > 0) {
-      setValue('amountPaid', total, { shouldDirty: true, shouldValidate: true });
-    } else {
-      setValue('amountPaid', undefined, { shouldDirty: true, shouldValidate: true });
-    }
+    setValue('amountPaid', total > 0 ? total : 0, { shouldDirty: true, shouldValidate: true });
   }, [
     nonAttendingType,
     sharedAccommodation,
@@ -670,11 +694,61 @@ export default function Registration() {
             <Field label="Devotee Category" required error={errors.devoteeCategory}>
               <Select options={DEVOTEE_CATEGORY} {...register('devoteeCategory')} />
             </Field>
-            <Field label="Mobile Number" required error={errors.mobileNumber}>
+            <Field label="Devotee Ashram" error={errors.devoteeAshram}>
+              <Select options={[{ value: '', label: 'Select (optional)' }, ...DEVOTEE_ASHRAM]} {...register('devoteeAshram')} />
+            </Field>
+            <Field label="Mobile Number (WhatsApp)" required error={errors.mobileNumber}>
               <Input {...register('mobileNumber')} placeholder="10-digit mobile" />
+            </Field>
+            <Field label="Email ID" required error={errors.email}>
+              <Input type="email" {...register('email')} placeholder="Enter your email address" />
             </Field>
             <Field label="Coming From (Place)" required error={errors.comingFrom}>
               <Input {...register('comingFrom')} />
+            </Field>
+            <Field label="Country" required error={errors.country}>
+              <select
+                {...register('country')}
+                onChange={(e) => {
+                  register('country').onChange(e);
+                  setValue('state', '');
+                  setValue('district', '');
+                }}
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                <option value="">Select Country</option>
+                {ALL_COUNTRIES.map((c) => (
+                  <option key={c.value} value={c.value}>{c.label}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="State / Province" required error={errors.state}>
+              <select
+                {...register('state')}
+                onChange={(e) => {
+                  register('state').onChange(e);
+                  setValue('district', '');
+                }}
+                disabled={!watchedCountry}
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
+              >
+                <option value="">{watchedCountry ? 'Select State' : 'Select country first'}</option>
+                {stateOptions.map((s) => (
+                  <option key={s.value} value={s.value}>{s.label}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="District / City" required error={errors.district}>
+              <select
+                {...register('district')}
+                disabled={!watchedState}
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
+              >
+                <option value="">{watchedState ? 'Select District' : 'Select state first'}</option>
+                {districtOptions.map((d) => (
+                  <option key={d.value} value={d.value}>{d.label}</option>
+                ))}
+              </select>
             </Field>
             <Field label="Facilitator Name" error={errors.facilitatorName}>
               <Input {...register('facilitatorName')} placeholder="Name of the facilitator (optional)" />
@@ -761,7 +835,12 @@ export default function Registration() {
             </Button>
           </CardHeader>
           <CardContent className="space-y-3">
-            {fields.length === 0 && (
+            {isBrahmachari && (
+              <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                Family member details are not required for Brahmachari. Each Brahmachari must register individually.
+              </p>
+            )}
+            {!isBrahmachari && fields.length === 0 && (
               <p className="text-sm text-muted-foreground">
                 No family members added.
               </p>
@@ -784,8 +863,10 @@ export default function Registration() {
                     className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
                   >
                     <option value="">Select</option>
-                    <option value="DISCIPLE">Disciple</option>
-                    <option value="NON_DISCIPLE">Non-Disciple</option>
+                    <option value="DISCIPLE">DISCIPLE</option>
+                    <option value="NON_DISCIPLE">NON DISCIPLE</option>
+                    <option value="ASPIRING">ASPIRING</option>
+                    <option value="FOLLOWER">FOLLOWER</option>
                   </select>
                 </div>
                 <div>
@@ -984,11 +1065,13 @@ export default function Registration() {
         
 
         {/* Accommodation */}
-        <Card className={isNonAttendingMode ? 'opacity-60' : ''}>
+        <Card className={isBrahmachari || isNonAttendingMode ? 'opacity-60' : ''}>
           <CardHeader>
             <CardTitle>Accommodation Preferences</CardTitle>
             <CardDescription>
-              {isNonAttendingMode
+              {isBrahmachari
+                ? 'Brahmachari can skip this section — accommodation is arranged separately by the ashram.'
+                : isNonAttendingMode
                 ? 'Accommodation is disabled because non attending devotee contribution is selected.'
                 : 'Please select only one option from the 7 accommodation choices.'}
             </CardDescription>
@@ -1329,7 +1412,7 @@ export default function Registration() {
             </Field>
             <Field
               label="Payment Screenshot"
-              required={!isBrahmachari}
+              required={screenshotRequired}
               error={errors.paymentScreenshot}
             >
               <Input
@@ -1345,9 +1428,9 @@ export default function Registration() {
                 }}
               />
               <p className="text-xs text-muted-foreground">
-                {isBrahmachari
-                  ? 'Optional for Brahmachari registration.'
-                  : 'Mandatory for all registrations except Brahmachari.'}
+                {isBrahmachari && watchedAmountPaid <= 0
+                  ? 'Optional when no donation amount is payable.'
+                  : 'Required — upload the payment screenshot before submitting.'}
               </p>
               {screenshotPreview && (
                 <img

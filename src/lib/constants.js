@@ -4,9 +4,16 @@
  */
 
 export const DEVOTEE_CATEGORY = [
-  { value: 'DISCIPLE', label: 'Disciple' },
-  { value: 'NON_DISCIPLE', label: 'Non Disciple' },
-  { value: 'BRAHMACHARI', label: 'Brahmachari' },
+  { value: 'DISCIPLE', label: 'DISCIPLE' },
+  { value: 'NON_DISCIPLE', label: 'NON DISCIPLE' },
+  { value: 'ASPIRING', label: 'ASPIRING' },
+  { value: 'FOLLOWER', label: 'FOLLOWER' },
+];
+
+export const DEVOTEE_ASHRAM = [
+  { value: 'GRIHASTHA', label: 'GRIHASTHA' },
+  { value: 'BRAHMACHARI', label: 'BRAHMACHARI' },
+  { value: 'ASPIRING', label: 'ASPIRING' },
 ];
 
 export const NON_ATTENDING_TYPE = [

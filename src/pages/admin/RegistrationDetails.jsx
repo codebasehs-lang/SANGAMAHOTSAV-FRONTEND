@@ -164,8 +164,13 @@ export default function RegistrationDetails() {
               <Row label="Gender" value={genderLabel(reg.gender)} />
               {/* <Row label="Initiated Name" value={reg.initiatedName} /> */}
               <Row label="Category" value={humanize(reg.devoteeCategory)} />
-              <Row label="Mobile" value={reg.mobileNumber} />
+              <Row label="Devotee Ashram" value={reg.devoteeAshram ? humanize(reg.devoteeAshram) : '-'} />
+              <Row label="Mobile (WhatsApp)" value={reg.mobileNumber} />
+              <Row label="Email" value={reg.email} />
               <Row label="Coming From" value={reg.comingFrom} />
+              <Row label="Country" value={reg.country} />
+              <Row label="State" value={reg.state} />
+              <Row label="District" value={reg.district} />
               <Row label="Facilitator" value={reg.facilitatorName} />
               <Row label="Family Members" value={family} />
             </dl>

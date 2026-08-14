@@ -64,14 +64,18 @@ export default function Dashboard() {
               <p className="text-2xl font-bold">{summary?.totalRegistrations ?? 0}</p>
               <p className="text-sm text-muted-foreground">Total Registrations</p>
               <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
-                <span>Disciple registrations: <span className="font-semibold text-foreground">{summary?.discipleRegistrations ?? 0}</span></span>
-                <span>Non-Disciple registrations: <span className="font-semibold text-foreground">{summary?.nonDiscipleRegistrations ?? 0}</span></span>
-                <span>Brahmachari registrations: <span className="font-semibold text-foreground">{summary?.brahmachariRegistrations ?? 0}</span></span>
+                <span>Disciple: <span className="font-semibold text-foreground">{summary?.discipleRegistrations ?? 0}</span></span>
+                <span>Non-Disciple: <span className="font-semibold text-foreground">{summary?.nonDiscipleRegistrations ?? 0}</span></span>
+                <span>Brahmachari: <span className="font-semibold text-foreground">{summary?.brahmachariRegistrations ?? 0}</span></span>
+                <span>Aspiring: <span className="font-semibold text-foreground">{summary?.aspiringRegistrations ?? 0}</span></span>
+                <span>Follower: <span className="font-semibold text-foreground">{summary?.followerRegistrations ?? 0}</span></span>
                 <span>Adults: <span className="font-semibold text-foreground">{summary?.totalAdults ?? 0}</span></span>
                 <span>Children: <span className="font-semibold text-foreground">{summary?.totalChildren ?? 0}</span></span>
                 <span>Prabhuji (male): <span className="font-semibold text-foreground">{summary?.maleCount ?? 0}</span></span>
                 <span>Mataji (female): <span className="font-semibold text-foreground">{summary?.femaleCount ?? 0}</span></span>
                 <span>Total Attendees: <span className="font-semibold text-foreground">{summary?.totalAttendees ?? 0}</span></span>
+                <span>Non Attending: <span className="font-semibold text-foreground">{summary?.nonAttendingCount ?? 0}</span></span>
+                <span>Attending Not Staying: <span className="font-semibold text-foreground">{summary?.attendingNotStayingCount ?? 0}</span></span>
               </div>
             </div>
           </CardContent>

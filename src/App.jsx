@@ -20,6 +20,7 @@ import SeminarHall from '@/pages/admin/SeminarHall';
 import Donations from '@/pages/admin/Donations';
 import SmsCampaigns from '@/pages/admin/SmsCampaigns';
 import FeedbackList from '@/pages/admin/FeedbackList';
+import Seva from '@/pages/admin/Seva';
 
 export default function App() {
   return (
@@ -54,6 +55,7 @@ export default function App() {
         <Route path="donations" element={<Donations />} />
         <Route path="sms" element={<SmsCampaigns />} />
         <Route path="feedback" element={<FeedbackList />} />
+        <Route path="seva" element={<Seva />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

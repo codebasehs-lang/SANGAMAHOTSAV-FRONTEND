@@ -9,6 +9,7 @@ import {
   MessageSquare,
   Star,
   Heart,
+  HandHelping,
   LogOut,
   Menu,
   X,
@@ -24,6 +25,7 @@ const NAV = [
   { to: '/admin/hotels', label: 'Hotels', icon: Hotel },
   { to: '/admin/seminar-hall', label: 'Seminar Hall', icon: Building2 },
   { to: '/admin/donations', label: 'Donations', icon: Heart },
+  { to: '/admin/seva', label: 'Seva', icon: HandHelping },
   { to: '/admin/sms', label: 'SMS Campaigns', icon: MessageSquare },
   { to: '/admin/feedback', label: 'Feedback', icon: Star },
 ];
