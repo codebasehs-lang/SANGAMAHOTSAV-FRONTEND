@@ -26,6 +26,24 @@ const ALL_COUNTRIES = Country.getAllCountries().map((c) => ({ value: c.isoCode, 
 const DORMITORY_OPTION = SHARED_ACCOMMODATION.find((opt) => opt.value === 'DORMITORY');
 const SHARED_ACCOMMODATION_PER_DEVOTEE = SHARED_ACCOMMODATION.filter((opt) => opt.value !== 'DORMITORY');
 
+function isAccommodationOptionClosed(value, gender, availabilityRows = []) {
+  const availability = availabilityRows.filter((row) => row.accommodationType === value);
+  if (!availability.length) return false;
+
+  if (value === 'DORMITORY') {
+    if (!gender) {
+      return !availability.some((row) => row.isOpen);
+    }
+
+    const matchingGenderRows = availability.filter((row) => row.gender === gender);
+    return matchingGenderRows.length
+      ? !matchingGenderRows.some((row) => row.isOpen)
+      : !availability.some((row) => row.isOpen);
+  }
+
+  return availability.every((row) => !row.isOpen);
+}
+
 const EXTRA_CHARGE_OPTIONS = [
   { value: 'EXTRA_DEVOTEE', label: 'Add extra devotee - ₹ 3500/-', amount: 3500 },
   { value: 'CHILD_12_PLUS', label: 'Children (+12 years) - ₹ 1000/-', amount: 1000 },
@@ -118,8 +136,10 @@ const schema = z
       )
       .optional(),
     mobileNumber: z.string().regex(/^[0-9]{10,15}$/, 'Enter a valid 10-15 digit number'),
-    email: z.string().email('Enter a valid email address').min(1, 'Email ID is required'),
-    comingFrom: z.string().min(1, 'This field is required'),
+    email: z.string().optional().refine((value) => !value || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value), {
+      message: 'Enter a valid email address',
+    }),
+    comingFrom: z.string().optional(),
     country: z.string().min(1, 'Country is required'),
     state: z.string().min(1, 'State is required'),
     district: z.string().min(1, 'District is required'),
@@ -288,6 +308,16 @@ export default function Registration() {
   const dormitoryClosedMessage =
     dormitoryAvailability?.statusMessage ||
     'Dormitory is currently full for the selected category. Please choose another accommodation option.';
+  const visibleDormitoryOption =
+    DORMITORY_OPTION && !isAccommodationOptionClosed('DORMITORY', gender, availabilityRows)
+      ? DORMITORY_OPTION
+      : null;
+  const visibleSharedAccommodationOptions = SHARED_ACCOMMODATION.filter(
+    (opt) => !isAccommodationOptionClosed(opt.value, gender, availabilityRows)
+  );
+  const visibleFamilyAccommodationOptions = FAMILY_ACCOMMODATION.filter(
+    (opt) => !isAccommodationOptionClosed(opt.value, gender, availabilityRows)
+  );
 
   useEffect(() => {
     api
@@ -387,6 +417,38 @@ export default function Registration() {
       });
     }
   }, [sharedAccommodation, isDormitoryClosed, setValue]);
+
+  useEffect(() => {
+    if (
+      sharedAccommodation &&
+      !SHARED_ACCOMMODATION.some(
+        (opt) =>
+          opt.value === sharedAccommodation &&
+          !isAccommodationOptionClosed(opt.value, gender, availabilityRows)
+      )
+    ) {
+      setValue('sharedAccommodation', '', {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+  }, [sharedAccommodation, gender, availabilityRows, setValue]);
+
+  useEffect(() => {
+    if (
+      familyAccommodation &&
+      !FAMILY_ACCOMMODATION.some(
+        (opt) =>
+          opt.value === familyAccommodation &&
+          !isAccommodationOptionClosed(opt.value, gender, availabilityRows)
+      )
+    ) {
+      setValue('familyAccommodation', '', {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+  }, [familyAccommodation, gender, availabilityRows, setValue]);
 
   useEffect(() => {
     const PRICES = {
@@ -560,7 +622,7 @@ export default function Registration() {
         formData.append('extraCharges', JSON.stringify(extraCharges));
       }
 
-      // File
+      // Files
       if (values.paymentScreenshot instanceof File) {
         formData.append('paymentScreenshot', values.paymentScreenshot);
       }
@@ -700,12 +762,12 @@ export default function Registration() {
             <Field label="Mobile Number (WhatsApp)" required error={errors.mobileNumber}>
               <Input {...register('mobileNumber')} placeholder="10-digit mobile" />
             </Field>
-            <Field label="Email ID" required error={errors.email}>
+            <Field label="Email ID" error={errors.email}>
               <Input type="email" {...register('email')} placeholder="Enter your email address" />
             </Field>
-            <Field label="Coming From (Place)" required error={errors.comingFrom}>
+            {/* <Field label="Coming From (Place)" error={errors.comingFrom}>
               <Input {...register('comingFrom')} />
-            </Field>
+            </Field> */}
             <Field label="Country" required error={errors.country}>
               <select
                 {...register('country')}
@@ -1077,51 +1139,64 @@ export default function Registration() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="space-y-2">
+            {visibleDormitoryOption && (
+              <div className="space-y-2">
+                <RadioGroup
+                  label="Dormitory (Prabhuji & Mataji)"
+                  name="sharedAccommodation"
+                  options={[visibleDormitoryOption]}
+                  selectedValue={selectedAccommodation}
+                  onSelect={selectAccommodation}
+                  disabled={isBrahmachari || isNonAttendingMode || isDormitoryClosed}
+                  error={errors.sharedAccommodation}
+                />
+                {isDormitoryClosed && (
+                  <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                    {dormitoryClosedMessage}
+                  </div>
+                )}
+                <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
+                  <p className="text-sm font-semibold text-amber-800">
+                    📢 Important Note — Dormitory (Prabhuji &amp; Mataji)
+                  </p>
+                  <p className="mt-1 text-sm text-amber-700">
+                    Dormitory accommodation is <span className="font-semibold">gender-separated</span> (separate halls for Prabhuji &amp; Mataji).
+                    Husband and wife <span className="font-semibold">must register individually</span> — each submitting their own separate registration form and selecting Dormitory.
+                    Please do <span className="font-semibold">not</span> add your spouse as a family member if both of you are choosing Dormitory.<span className="font-semibold text-amber-900"> Brahmacharis</span> also <span className="font-semibold">must register individually</span> with their own separate registration form.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {visibleSharedAccommodationOptions.filter((opt) => opt.value !== 'DORMITORY').length > 0 && (
+              <div className="space-y-2">
+                <p className="text-base font-bold text-slate-800">
+                  Shared Accommodation <span className="font-extrabold text-green-700">Per Devotee</span>
+                  <span className="font-normal text-slate-700"> (3 devotees per room Common utility + Prasadam)</span>
+                </p>
+                <RadioGroup
+                  label=""
+                  name="sharedAccommodation"
+                  options={visibleSharedAccommodationOptions.filter((opt) => opt.value !== 'DORMITORY')}
+                  selectedValue={selectedAccommodation}
+                  onSelect={selectAccommodation}
+                  disabled={isBrahmachari || isNonAttendingMode}
+                  error={errors.sharedAccommodation}
+                />
+              </div>
+            )}
+
+            {visibleFamilyAccommodationOptions.length > 0 && (
               <RadioGroup
-                label="Dormitory (Prabhuji & Mataji)"
-                name="sharedAccommodation"
-                options={DORMITORY_OPTION ? [DORMITORY_OPTION] : []}
+                label="Family Accommodation (2 devotees Per Room Common utility + Prasadam)"
+                name="familyAccommodation"
+                options={visibleFamilyAccommodationOptions}
                 selectedValue={selectedAccommodation}
                 onSelect={selectAccommodation}
-                disabled={isBrahmachari || isNonAttendingMode || isDormitoryClosed}
-                error={errors.sharedAccommodation}
+                disabled={isBrahmachari || isNonAttendingMode}
+                error={errors.familyAccommodation}
               />
-              {isDormitoryClosed && (
-                <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                  {dormitoryClosedMessage}
-                </div>
-              )}
-              <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
-                <p className="text-sm font-semibold text-amber-800">
-                  📢 Important Note — Dormitory (Prabhuji &amp; Mataji)
-                </p>
-                <p className="mt-1 text-sm text-amber-700">
-                  Dormitory accommodation is <span className="font-semibold">gender-separated</span> (separate halls for Prabhuji &amp; Mataji).
-                  Husband and wife <span className="font-semibold">must register individually</span> — each submitting their own separate registration form and selecting Dormitory.
-                  Please do <span className="font-semibold">not</span> add your spouse as a family member if both of you are choosing Dormitory.<span className="font-semibold text-amber-900"> Brahmacharis</span> also <span className="font-semibold">must register individually</span> with their own separate registration form.
-                </p>
-              </div>
-            </div>
-            <RadioGroup
-              label="Shared Accommodation Per Devotee (3 devotees per room Common utility + Prasadam)"
-              name="sharedAccommodation"
-              options={SHARED_ACCOMMODATION_PER_DEVOTEE}
-              selectedValue={selectedAccommodation}
-              onSelect={selectAccommodation}
-              disabled={isBrahmachari || isNonAttendingMode}
-              error={errors.sharedAccommodation}
-            />
-
-            <RadioGroup
-              label="Family Accommodation (2 devotees Per Room Common utility + Prasadam)"
-              name="familyAccommodation"
-              options={FAMILY_ACCOMMODATION}
-              selectedValue={selectedAccommodation}
-              onSelect={selectAccommodation}
-              disabled={isBrahmachari || isNonAttendingMode}
-              error={errors.familyAccommodation}
-            />
+            )}
             {familyAccommodation && !isNonAttendingMode && (
               <div className="space-y-2 rounded-md border border-amber-200 bg-amber-50/80 px-4 py-3 shadow-sm">
                 {EXTRA_CHARGE_OPTIONS.map((opt) => (
@@ -1418,14 +1493,7 @@ export default function Registration() {
               <Input
                 type="file"
                 accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0] ?? null;
-                  setValue('paymentScreenshot', file || undefined, {
-                    shouldDirty: true,
-                    shouldValidate: true,
-                  });
-                  setScreenshotPreview(file ? URL.createObjectURL(file) : null);
-                }}
+                onChange={(e) => {/* Lines 1497-1503 omitted */}}
               />
               <p className="text-xs text-muted-foreground">
                 {isBrahmachari && watchedAmountPaid <= 0

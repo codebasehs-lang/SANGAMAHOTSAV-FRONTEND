@@ -737,6 +737,26 @@ describe('Dormitory Availability', () => {
 
     unmount();
   });
+
+  it('hides closed shared and family accommodation options from the public form', async () => {
+    api.get.mockResolvedValueOnce({
+      data: {
+        data: [
+          { accommodationType: 'AC_SHARING', gender: 'ALL', isOpen: false },
+          { accommodationType: 'DELUXE_AC', gender: 'ALL', isOpen: false },
+        ],
+      },
+    });
+
+    const { unmount } = await act(async () => render(<Registration />));
+
+    await waitFor(() => {
+      expect(screen.queryByLabelText(/AC Sharing - ₹ 7000\/\-/i)).not.toBeInTheDocument();
+      expect(screen.queryByLabelText(/AC Room - Deluxe AC - ₹ 18000\/\-/i)).not.toBeInTheDocument();
+    });
+
+    unmount();
+  });
 });
 
 // ─── 14. Preferred Subject ────────────────────────────────────────────────────

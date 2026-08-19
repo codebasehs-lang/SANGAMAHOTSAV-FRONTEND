@@ -23,6 +23,7 @@ import {
   Star,
 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
+import { Modal } from '@/components/ui/modal';
 import { cn, currency } from '@/lib/utils';
 
 export default function RegistrantDashboard() {
@@ -38,6 +39,7 @@ export default function RegistrantDashboard() {
   const [activeSection, setActiveSection] = useState('notice');
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [profilePhoto, setProfilePhoto] = useState('');
+  const [showProfilePhotoModal, setShowProfilePhotoModal] = useState(false);
   const [photoMessage, setPhotoMessage] = useState('');
   const [screenshotMessage, setScreenshotMessage] = useState('');
   const [feedbackForm, setFeedbackForm] = useState({ name: '', mobileNumber: '', overallRating: 0, suggestions: '' });
@@ -46,7 +48,9 @@ export default function RegistrantDashboard() {
   const [feedbackLoading, setFeedbackLoading] = useState(false);
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
   const photoInputRef = useRef(null);
-  const screenshotInputRef = useRef(null);
+  const screenshotRef1 = useRef(null);
+  const screenshotRef2 = useRef(null);
+  const screenshotRef3 = useRef(null);
 
   const sections = [
     { key: 'basic', label: 'Basic Details', icon: BadgeInfo },
@@ -66,7 +70,9 @@ export default function RegistrantDashboard() {
       try {
         const { data } = await api.get('/registrant-auth/me');
         setProfile(data.data);
-        setProfilePhoto(data.data.profilePhoto || '');
+        const nextPhoto = data.data.profilePhoto || '';
+        setProfilePhoto(nextPhoto);
+        setShowProfilePhotoModal(!nextPhoto);
       } catch (err) {
         setError(getErrorMessage(err));
         tokenStore.clear();
@@ -150,6 +156,7 @@ export default function RegistrantDashboard() {
       setProfilePhoto(nextPhoto);
       setProfile((prev) => (prev ? { ...prev, profilePhoto: nextPhoto } : prev));
       setPhotoMessage('Profile photo updated.');
+      setShowProfilePhotoModal(false);
     } catch (err) {
       setPhotoMessage(getErrorMessage(err));
     }
@@ -157,7 +164,7 @@ export default function RegistrantDashboard() {
     e.target.value = '';
   }
 
-  async function handleScreenshotChange(e) {
+  async function handleScreenshotChange(e, installmentNumber) {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -177,21 +184,14 @@ export default function RegistrantDashboard() {
 
     try {
       const formData = new FormData();
-      formData.append('paymentScreenshot', file);
+      formData.append(`paymentScreenshot${installmentNumber}`, file);
 
       const { data } = await api.put('/registrant-auth/payment-screenshot', formData);
-      const nextScreenshot = data?.data?.paymentScreenshot || '';
-      const nextAllowFlag = Boolean(data?.data?.allowPaymentScreenshotUpdate);
-      setProfile((prev) =>
-        prev
-          ? {
-              ...prev,
-              paymentScreenshot: nextScreenshot,
-              allowPaymentScreenshotUpdate: nextAllowFlag,
-            }
-          : prev
-      );
-      setScreenshotMessage('Payment screenshot updated.');
+      const updatedProfile = { ...profile };
+      updatedProfile[`paymentScreenshot${installmentNumber}`] = data?.data?.[`paymentScreenshot${installmentNumber}`] || '';
+      updatedProfile.allowPaymentScreenshotUpdate = Boolean(data?.data?.allowPaymentScreenshotUpdate);
+      setProfile(updatedProfile);
+      setScreenshotMessage(`Installment ${installmentNumber} screenshot updated.`);
     } catch (err) {
       setScreenshotMessage(getErrorMessage(err));
     }
@@ -199,11 +199,42 @@ export default function RegistrantDashboard() {
     e.target.value = '';
   }
 
+  function handlePickScreenshot(installmentNumber) {
+    if (installmentNumber === 1) {
+      screenshotRef1.current?.click();
+    } else if (installmentNumber === 2) {
+      screenshotRef2.current?.click();
+    } else {
+      screenshotRef3.current?.click();
+    }
+  }
+
   if (loading) {
     return <div className="p-6 text-center">Loading your registration details...</div>;
   }
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-emerald-50 via-teal-50 to-sky-100">
+      <Modal
+        open={showProfilePhotoModal}
+        onClose={() => setShowProfilePhotoModal(false)}
+        title="Add your profile photo"
+        className="max-w-md"
+      >
+        <div className="flex flex-col items-center gap-4 text-center">
+          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+            <User className="h-12 w-12" />
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Upload a profile photo to personalize your dashboard.
+          </p>
+          <Button type="button" variant="success" onClick={handlePickPhoto}>
+            <Camera className="h-4 w-4" />
+            Upload profile photo
+          </Button>
+          {photoMessage && <p className="text-xs text-destructive">{photoMessage}</p>}
+        </div>
+      </Modal>
+
       <div className="pointer-events-none absolute -left-20 -top-20 h-72 w-72 rounded-full bg-emerald-300/30 blur-3xl" />
       <div className="pointer-events-none absolute right-0 top-1/3 h-80 w-80 rounded-full bg-sky-300/25 blur-3xl" />
       <div className="pointer-events-none absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-teal-200/35 blur-3xl" />
@@ -388,6 +419,36 @@ export default function RegistrantDashboard() {
                       <p className="font-medium">{profile?.comingFrom}</p>
                     </div>
                   </div>
+                  
+                    {profile?.familyMembers && profile.familyMembers.length > 0 && (
+                      <div className="mt-6 space-y-3 border-t pt-4">
+                        <p className="font-semibold text-slate-700">Family Members</p>
+                        <div className="space-y-2">
+                          {profile.familyMembers.map((member, index) => (
+                            <div key={index} className="rounded-md border border-emerald-100 bg-emerald-50/60 p-3">
+                              <div className="grid gap-2 sm:grid-cols-4">
+                                <div>
+                                  <p className="text-muted-foreground text-xs">Name</p>
+                                  <p className="font-medium text-sm">{member.name}</p>
+                                </div>
+                                <div>
+                                  <p className="text-muted-foreground text-xs">Age</p>
+                                  <p className="font-medium text-sm">{member.age}</p>
+                                </div>
+                                <div>
+                                  <p className="text-muted-foreground text-xs">Category</p>
+                                  <p className="font-medium text-sm">{member.devoteeCategory}</p>
+                                </div>
+                                <div>
+                                  <p className="text-muted-foreground text-xs">Gender</p>
+                                  <p className="font-medium text-sm">{member.gender === 'MALE' ? 'Prabhuji' : 'Mataji'}</p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                 </CardContent>
               </Card>
             )}
@@ -466,62 +527,72 @@ export default function RegistrantDashboard() {
                   <p><span className="text-muted-foreground text-xs">Status</span> <span className={`ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${profile?.paymentStatus === 'APPROVED' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>{profile?.paymentStatus}</span></p>
                   <p className="mt-2"><strong>Amount Paid:</strong> {currency(profile?.amountPaid || 0)}</p>
                   <p><strong>Reference:</strong> {profile?.paymentReferenceId || '-'}</p>
-                  <div className="mt-4 rounded-md border border-emerald-100 bg-emerald-50/40 p-3">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div>
-                        <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-emerald-800">
-                          Payment Screenshot
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {profile?.paymentScreenshot
-                            ? 'Uploaded screenshot is shown below.'
-                            : 'No payment screenshot uploaded yet. You can upload it here.'}
-                        </p>
+                  
+                  <div className="mt-4 space-y-3">
+                    <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-emerald-800">
+                      Payment Screenshots <span className="text-muted-foreground">(Upload up to 3 installments)</span>
+                    </p>
+                    
+                    {[1, 2, 3].map((installmentNumber) => (
+                      <div key={installmentNumber} className="rounded-md border border-emerald-100 bg-emerald-50/40 p-3">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                          <div>
+                            <p className="text-sm font-semibold text-slate-700">
+                              Installment {installmentNumber} {installmentNumber > 1 && <span className="text-xs text-muted-foreground">(Optional)</span>}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {profile?.[`paymentScreenshot${installmentNumber}`]
+                                ? 'Screenshot uploaded'
+                                : 'No screenshot yet'}
+                            </p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => handlePickScreenshot(installmentNumber)}
+                            disabled={profile?.[`paymentScreenshot${installmentNumber}`] && !profile?.allowPaymentScreenshotUpdate}
+                            className="w-full sm:w-auto"
+                            size="sm"
+                          >
+                            <Receipt className="h-4 w-4" />
+                            {profile?.[`paymentScreenshot${installmentNumber}`] ? 'Update' : 'Upload'}
+                          </Button>
+                        </div>
+
+                        <input
+                          ref={installmentNumber === 1 ? screenshotRef1 : installmentNumber === 2 ? screenshotRef2 : screenshotRef3}
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => handleScreenshotChange(e, installmentNumber)}
+                        />
+
+                        {profile?.[`paymentScreenshot${installmentNumber}`] ? (
+                          <a
+                            href={profile[`paymentScreenshot${installmentNumber}`]}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-2 block overflow-hidden rounded border border-emerald-100 bg-white"
+                          >
+                            <img
+                              src={profile[`paymentScreenshot${installmentNumber}`]}
+                              alt={`Installment ${installmentNumber} screenshot`}
+                              className="max-h-[200px] w-full object-contain bg-white"
+                            />
+                          </a>
+                        ) : null}
                       </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={handlePickScreenshot}
-                        disabled={Boolean(profile?.paymentScreenshot) && !profile?.allowPaymentScreenshotUpdate}
-                        className="w-full sm:w-auto"
-                      >
-                        <Receipt className="h-4 w-4" />
-                        {profile?.paymentScreenshot ? 'Update Screenshot' : 'Upload Screenshot'}
-                      </Button>
-                    </div>
-
-                    <input
-                      ref={screenshotInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleScreenshotChange}
-                    />
-
+                    ))}
+                    
                     {screenshotMessage && (
                       <p className="mt-2 text-xs text-emerald-700">{screenshotMessage}</p>
                     )}
 
-                    {profile?.paymentScreenshot && !profile?.allowPaymentScreenshotUpdate ? (
+                    {profile?.allowPaymentScreenshotUpdate === false && (
                       <p className="mt-2 text-xs text-muted-foreground">
                         Screenshot updates are currently disabled. Contact admin if this needs to be changed.
                       </p>
-                    ) : null}
-
-                    {profile?.paymentScreenshot ? (
-                      <a
-                        href={profile.paymentScreenshot}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-3 block overflow-hidden rounded-lg border border-emerald-100 bg-white"
-                      >
-                        <img
-                          src={profile.paymentScreenshot}
-                          alt="Payment screenshot"
-                          className="max-h-[420px] w-full object-contain bg-white"
-                        />
-                      </a>
-                    ) : null}
+                    )}
                   </div>
                 </CardContent>
               </Card>

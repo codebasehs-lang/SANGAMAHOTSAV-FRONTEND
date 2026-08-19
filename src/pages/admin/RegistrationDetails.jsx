@@ -269,6 +269,30 @@ export default function RegistrationDetails() {
                   </dd>
                 </div>
               )}
+              
+              {/* Show installment screenshots if they exist */}
+              {[1, 2, 3].map((installmentNumber) => {
+                const screenshotField = `paymentScreenshot${installmentNumber}`;
+                return reg[screenshotField] ? (
+                  <div key={screenshotField} className="flex flex-col gap-0.5 border-b py-2 text-sm last:border-0 sm:grid sm:grid-cols-3 sm:gap-2">
+                    <dt className="text-muted-foreground">Installment {installmentNumber} Screenshot</dt>
+                    <dd className="sm:col-span-2">
+                      <button
+                        type="button"
+                        onClick={() => setLightboxSrc(reg[screenshotField])}
+                        className="focus:outline-none"
+                      >
+                        <img
+                          src={reg[screenshotField]}
+                          alt={`Installment ${installmentNumber} screenshot`}
+                          className="max-h-48 cursor-zoom-in rounded-md border object-contain transition hover:opacity-80"
+                        />
+                      </button>
+                    </dd>
+                  </div>
+                ) : null;
+              })}
+              
               <Row label="Comments" value={reg.comments} />
             </dl>
           </CardContent>
