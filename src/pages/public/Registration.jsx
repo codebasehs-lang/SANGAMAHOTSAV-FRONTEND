@@ -1493,7 +1493,17 @@ export default function Registration() {
               <Input
                 type="file"
                 accept="image/*"
-                onChange={(e) => {/* Lines 1497-1503 omitted */}}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  setValue('paymentScreenshot', file, {
+                    shouldDirty: true,
+                    shouldValidate: true,
+                  });
+                  setScreenshotPreview((prev) => {
+                    if (prev) URL.revokeObjectURL(prev);
+                    return file ? URL.createObjectURL(file) : null;
+                  });
+                }}
               />
               <p className="text-xs text-muted-foreground">
                 {isBrahmachari && watchedAmountPaid <= 0

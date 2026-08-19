@@ -43,10 +43,10 @@ function SidebarNav({ onLinkClick }) {
           onClick={onLinkClick}
           className={({ isActive }) =>
             cn(
-              'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+              'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
               isActive
-                ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                ? 'bg-white/10 text-white shadow-inner ring-1 ring-white/10'
+                : 'text-indigo-100/70 hover:bg-white/5 hover:text-white'
             )
           }
         >
@@ -69,11 +69,12 @@ export default function AdminLayout() {
   }
 
   return (
-    <div className="flex min-h-screen bg-muted/30">
+    <div className="flex min-h-screen bg-gradient-to-br from-slate-100 via-indigo-50 to-slate-200">
       {/* Desktop sidebar */}
-      <aside className="hidden w-64 flex-col border-r bg-white md:flex">
-        <div className="flex h-16 items-center border-b px-6">
-          <span className="text-lg font-bold text-primary">Sanga Mahotsav</span>
+      <aside className="hidden w-64 flex-col bg-gradient-to-b from-slate-900 via-slate-800 to-indigo-900 md:flex">
+        <div className="flex h-16 items-center gap-2 border-b border-white/10 px-6">
+          <LayoutDashboard className="h-5 w-5 text-indigo-300" />
+          <span className="font-serif text-lg font-bold text-white">Sanga Mahotsav</span>
         </div>
         <SidebarNav />
       </aside>
@@ -90,15 +91,18 @@ export default function AdminLayout() {
       {/* Mobile drawer */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r bg-white transition-transform duration-200 md:hidden',
+          'fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-gradient-to-b from-slate-900 via-slate-800 to-indigo-900 transition-transform duration-200 md:hidden',
           drawerOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
-        <div className="flex h-14 items-center justify-between border-b px-4">
-          <span className="text-lg font-bold text-primary">Sanga Mahotsav</span>
+        <div className="flex h-14 items-center justify-between border-b border-white/10 px-4">
+          <div className="flex items-center gap-2">
+            <LayoutDashboard className="h-5 w-5 text-indigo-300" />
+            <span className="font-serif text-lg font-bold text-white">Sanga Mahotsav</span>
+          </div>
           <button
             onClick={() => setDrawerOpen(false)}
-            className="rounded-md p-1 text-muted-foreground hover:bg-accent"
+            className="rounded-md p-1 text-indigo-100/70 hover:bg-white/10 hover:text-white"
             aria-label="Close menu"
           >
             <X className="h-5 w-5" />
@@ -109,32 +113,37 @@ export default function AdminLayout() {
 
       {/* Main */}
       <div className="flex flex-1 flex-col">
-        <header className="flex h-14 items-center justify-between border-b bg-white px-4 md:h-16 md:px-6">
+        <header className="flex h-14 items-center justify-between border-b border-indigo-100 bg-white/80 px-4 shadow-sm backdrop-blur-xl md:h-16 md:px-6">
           {/* Hamburger — mobile only */}
           <button
-            className="rounded-md p-1.5 text-muted-foreground hover:bg-accent md:hidden"
+            className="rounded-md p-1.5 text-indigo-700 hover:bg-indigo-50 md:hidden"
             onClick={() => setDrawerOpen(true)}
             aria-label="Open menu"
           >
             <Menu className="h-5 w-5" />
           </button>
 
-          <span className="hidden font-bold text-primary md:hidden" />
+          <span className="hidden font-bold text-slate-900 md:hidden" />
 
           <div className="ml-auto flex items-center gap-2 md:gap-4">
-            <div className="hidden items-center gap-2 text-sm text-muted-foreground sm:flex">
+            <div className="hidden items-center gap-2 text-sm text-slate-600 sm:flex">
               <span className="max-w-[120px] truncate md:max-w-none">{admin?.name || admin?.email}</span>
               {isViewer ? (
                 <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-semibold text-yellow-700">
                   View Only
                 </span>
               ) : (
-                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+                <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-700">
                   Admin
                 </span>
               )}
             </div>
-            <Button variant="outline" size="sm" onClick={handleLogout}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLogout}
+              className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800"
+            >
               <LogOut className="h-4 w-4" />
               <span className="hidden sm:inline">Logout</span>
             </Button>

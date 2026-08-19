@@ -179,9 +179,9 @@ export default function Seva() {
 
       {/* By Devotee — table */}
       {view === 'byDevotion' && (
-        <div className="overflow-auto rounded-xl border bg-white shadow-sm">
+        <div className="max-h-[65vh] overflow-auto rounded-xl border bg-white shadow-sm">
           <table className="w-full text-sm">
-            <thead>
+            <thead className="sticky top-0 z-10">
               <tr className="border-b bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
                 <th className="px-4 py-3 text-left font-semibold">#</th>
                 <th className="px-4 py-3 text-left font-semibold">Name</th>

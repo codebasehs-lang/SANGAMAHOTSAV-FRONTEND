@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Download, Eye, ImageIcon, X, CheckCircle2 } from 'lucide-react';
+import { Search, Download, Eye, ImageIcon, X, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
 
 import api, { getErrorMessage, tokenStore } from '@/lib/api';
 import { humanize, formatDate } from '@/lib/utils';
@@ -29,12 +29,24 @@ import StatusBadge from '@/components/StatusBadge';
 import Pagination from '@/components/Pagination';
 import { Spinner } from '@/components/Spinner';
 
-function ImageModal({ src, onClose }) {
+function ImageModal({ images, initialIndex = 0, onClose }) {
+  const [index, setIndex] = useState(initialIndex);
+  const total = images.length;
+  const goPrev = useCallback(() => setIndex((i) => (i - 1 + total) % total), [total]);
+  const goNext = useCallback(() => setIndex((i) => (i + 1) % total), [total]);
+
   useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    const onKey = (e) => {
+      if (e.key === 'Escape') onClose();
+      if (e.key === 'ArrowLeft' && total > 1) goPrev();
+      if (e.key === 'ArrowRight' && total > 1) goNext();
+    };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  }, [onClose, goPrev, goNext, total]);
+
+  const current = images[index];
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4"
@@ -48,11 +60,36 @@ function ImageModal({ src, onClose }) {
         >
           <X className="h-4 w-4" />
         </button>
+
+        {total > 1 && (
+          <button
+            onClick={goPrev}
+            className="absolute left-2 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 shadow-md hover:bg-white"
+            aria-label="Previous screenshot"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+        )}
+
         <img
-          src={src}
-          alt="Payment screenshot"
+          src={current.src}
+          alt={current.label}
           className="max-h-[85vh] max-w-[85vw] rounded-lg object-contain shadow-xl"
         />
+
+        {total > 1 && (
+          <button
+            onClick={goNext}
+            className="absolute right-2 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 shadow-md hover:bg-white"
+            aria-label="Next screenshot"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+        )}
+
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1 text-xs font-medium text-white">
+          {current.label}{total > 1 ? ` · ${index + 1} of ${total}` : ''}
+        </div>
       </div>
     </div>
   );
@@ -124,7 +161,7 @@ export default function Registrations() {
   const [meta, setMeta] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [lightboxSrc, setLightboxSrc] = useState(null);
+  const [lightboxImages, setLightboxImages] = useState(null);
   const [approvingId, setApprovingId] = useState(null);
 
   const [search, setSearch] = useState('');
@@ -197,8 +234,8 @@ export default function Registrations() {
 
   return (
     <div className="space-y-4">
-      {lightboxSrc && (
-        <ImageModal src={lightboxSrc} onClose={() => setLightboxSrc(null)} />
+      {lightboxImages && (
+        <ImageModal images={lightboxImages} onClose={() => setLightboxImages(null)} />
       )}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">Registrations</h1>
@@ -288,16 +325,26 @@ export default function Registrations() {
                     <TableCell className="text-center">
                       <div className="flex flex-col items-center gap-1">
                         <PaymentStatusBadge status={r.paymentStatus} />
-                        {r.paymentScreenshot && (
-                          <button
-                            type="button"
-                            title="View payment screenshot"
-                            onClick={() => setLightboxSrc(r.paymentScreenshot)}
-                            className="mt-0.5 flex items-center gap-1 text-xs text-primary hover:underline"
-                          >
-                            <ImageIcon className="h-3.5 w-3.5" /> Screenshot
-                          </button>
-                        )}
+                        {(() => {
+                          const images = [1, 2, 3]
+                            .filter((n) => r[`paymentScreenshot${n}`])
+                            .map((n) => ({ label: `Installment ${n}`, src: r[`paymentScreenshot${n}`] }));
+                          if (images.length === 0 && r.paymentScreenshot) {
+                            images.push({ label: 'Payment Screenshot', src: r.paymentScreenshot });
+                          }
+                          return (
+                            images.length > 0 && (
+                              <button
+                                type="button"
+                                title="View payment screenshot"
+                                onClick={() => setLightboxImages(images)}
+                                className="mt-0.5 flex items-center gap-1 text-xs text-primary hover:underline"
+                              >
+                                <ImageIcon className="h-3.5 w-3.5" /> Screenshot
+                              </button>
+                            )
+                          );
+                        })()}
                       </div>
                     </TableCell>
                     <TableCell className="text-right">

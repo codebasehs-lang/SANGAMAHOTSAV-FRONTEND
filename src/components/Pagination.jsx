@@ -22,6 +22,7 @@ export default function Pagination({ meta, onPageChange }) {
           size="sm"
           disabled={!meta.hasPrevPage}
           onClick={() => onPageChange(page - 1)}
+          className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 disabled:text-muted-foreground"
         >
           <ChevronLeft className="mr-1 h-4 w-4" /> Prev
         </Button>
@@ -32,6 +33,11 @@ export default function Pagination({ meta, onPageChange }) {
             variant={pageNumber === page ? 'default' : 'outline'}
             size="sm"
             onClick={() => onPageChange(pageNumber)}
+            className={
+              pageNumber === page
+                ? 'bg-indigo-700 text-white hover:bg-indigo-800'
+                : 'border-indigo-200 text-indigo-700 hover:bg-indigo-50'
+            }
           >
             {pageNumber}
           </Button>
@@ -42,6 +48,7 @@ export default function Pagination({ meta, onPageChange }) {
           size="sm"
           disabled={!meta.hasNextPage}
           onClick={() => onPageChange(page + 1)}
+          className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 disabled:text-muted-foreground"
         >
           Next <ChevronRight className="ml-1 h-4 w-4" />
         </Button>
