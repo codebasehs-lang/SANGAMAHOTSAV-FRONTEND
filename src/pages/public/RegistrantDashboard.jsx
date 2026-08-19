@@ -26,6 +26,21 @@ import { Textarea } from '@/components/ui/textarea';
 import { Modal } from '@/components/ui/modal';
 import { cn, currency } from '@/lib/utils';
 
+const FAMILY_RELATIONSHIPS = [
+  'Spouse',
+  'Father',
+  'Mother',
+  'Son',
+  'Daughter',
+  'Brother',
+  'Sister',
+  'Friend',
+  'God Brother',
+  'God Sister',
+  'Relative',
+  'Other',
+];
+
 export default function RegistrantDashboard() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
@@ -41,6 +56,9 @@ export default function RegistrantDashboard() {
   const [profilePhoto, setProfilePhoto] = useState('');
   const [showProfilePhotoModal, setShowProfilePhotoModal] = useState(false);
   const [photoMessage, setPhotoMessage] = useState('');
+  const [relationshipValues, setRelationshipValues] = useState({});
+  const [relationshipSaving, setRelationshipSaving] = useState({});
+  const [relationshipMessage, setRelationshipMessage] = useState('');
   const [screenshotMessage, setScreenshotMessage] = useState('');
   const [feedbackForm, setFeedbackForm] = useState({ name: '', mobileNumber: '', overallRating: 0, suggestions: '' });
   const [feedbackRating, setFeedbackRating] = useState(0);
@@ -162,6 +180,36 @@ export default function RegistrantDashboard() {
     }
 
     e.target.value = '';
+  }
+
+  function handleRelationshipChange(memberIndex, relationship) {
+    setRelationshipValues((current) => ({ ...current, [memberIndex]: relationship }));
+  }
+
+  async function handleRelationshipSave(memberIndex) {
+    const relationship = relationshipValues[memberIndex];
+    if (!relationship) return;
+
+    setRelationshipMessage('');
+    setRelationshipSaving((current) => ({ ...current, [memberIndex]: true }));
+
+    try {
+      const { data } = await api.put('/registrant-auth/family-member-relationship', {
+        memberIndex,
+        relationship,
+      });
+      setProfile((current) => (current ? { ...current, familyMembers: data.data.familyMembers } : current));
+      setRelationshipValues((current) => {
+        const next = { ...current };
+        delete next[memberIndex];
+        return next;
+      });
+      setRelationshipMessage('Relationship updated successfully.');
+    } catch (err) {
+      setRelationshipMessage(getErrorMessage(err));
+    } finally {
+      setRelationshipSaving((current) => ({ ...current, [memberIndex]: false }));
+    }
   }
 
   async function handleScreenshotChange(e, installmentNumber) {
@@ -426,7 +474,7 @@ export default function RegistrantDashboard() {
                         <div className="space-y-2">
                           {profile.familyMembers.map((member, index) => (
                             <div key={index} className="rounded-md border border-emerald-100 bg-emerald-50/60 p-3">
-                              <div className="grid gap-2 sm:grid-cols-4">
+                              <div className="grid gap-2 sm:grid-cols-5">
                                 <div>
                                   <p className="text-muted-foreground text-xs">Name</p>
                                   <p className="font-medium text-sm">{member.name}</p>
@@ -443,10 +491,36 @@ export default function RegistrantDashboard() {
                                   <p className="text-muted-foreground text-xs">Gender</p>
                                   <p className="font-medium text-sm">{member.gender === 'MALE' ? 'Prabhuji' : 'Mataji'}</p>
                                 </div>
+                                <div>
+                                  <p className="text-muted-foreground text-xs">Relationship</p>
+                                  <select
+                                    value={relationshipValues[index] ?? member.relationship ?? ''}
+                                    onChange={(event) => handleRelationshipChange(index, event.target.value)}
+                                    className="mt-1 h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                                  >
+                                    <option value="">Select relationship</option>
+                                    {FAMILY_RELATIONSHIPS.map((relationship) => (
+                                      <option key={relationship} value={relationship}>{relationship}</option>
+                                    ))}
+                                  </select>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    className="mt-2 h-7 w-full px-2 text-xs"
+                                    disabled={!relationshipValues[index] || relationshipSaving[index]}
+                                    onClick={() => handleRelationshipSave(index)}
+                                  >
+                                    {relationshipSaving[index] ? 'Saving...' : 'Save'}
+                                  </Button>
+                                </div>
                               </div>
                             </div>
                           ))}
                         </div>
+                        {relationshipMessage && (
+                          <p className="text-xs text-emerald-700">{relationshipMessage}</p>
+                        )}
                       </div>
                     )}
                 </CardContent>
