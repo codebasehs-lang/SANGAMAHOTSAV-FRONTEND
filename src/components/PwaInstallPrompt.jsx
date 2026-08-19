@@ -14,14 +14,17 @@ function isStandalone() {
   );
 }
 
-export default function PwaInstallPrompt() {
+export default function PwaInstallPrompt({ isAdmin = false }) {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [visible, setVisible] = useState(false);
   const [iosHint, setIosHint] = useState(false);
 
+  const dismissKey = isAdmin ? `${DISMISS_KEY}_admin` : DISMISS_KEY;
+  const appName = isAdmin ? 'Admin Dashboard' : 'Sanga Mahotsav';
+
   useEffect(() => {
     if (isStandalone()) return;
-    if (localStorage.getItem(DISMISS_KEY)) return;
+    if (localStorage.getItem(dismissKey)) return;
 
     // iOS Safari has no beforeinstallprompt — show manual instructions instead.
     if (isIos()) {
@@ -47,7 +50,7 @@ export default function PwaInstallPrompt() {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
       window.removeEventListener('appinstalled', handleInstalled);
     };
-  }, []);
+  }, [dismissKey]);
 
   async function handleInstall() {
     if (!deferredPrompt) return;
@@ -65,10 +68,25 @@ export default function PwaInstallPrompt() {
 
   function handleDismiss() {
     setVisible(false);
-    localStorage.setItem(DISMISS_KEY, '1');
+    localStorage.setItem(dismissKey, '1');
   }
 
   if (!visible) return null;
+
+  const heroClasses = isAdmin
+    ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900'
+    : 'bg-gradient-to-br from-emerald-800 via-emerald-700 to-teal-600';
+  const accentGlow1 = isAdmin ? 'bg-indigo-400/30' : 'bg-emerald-400/30';
+  const accentGlow2 = isAdmin ? 'bg-slate-400/20' : 'bg-teal-300/25';
+  const cardShadow = isAdmin ? 'shadow-indigo-900/30' : 'shadow-emerald-900/30';
+  const tileBg = isAdmin ? 'bg-indigo-50' : 'bg-emerald-50';
+  const tileIcon = isAdmin ? 'text-indigo-700' : 'text-emerald-700';
+  const tileText = isAdmin ? 'text-indigo-900' : 'text-emerald-900';
+  const buttonClasses = isAdmin
+    ? 'bg-gradient-to-r from-slate-800 to-indigo-700 shadow-indigo-200/60 hover:from-slate-900 hover:to-indigo-800'
+    : 'bg-gradient-to-r from-emerald-700 to-teal-600 shadow-emerald-200/60 hover:from-emerald-800 hover:to-teal-700';
+  const dismissHover = isAdmin ? 'hover:text-indigo-800' : 'hover:text-emerald-800';
+  const appIcon = isAdmin ? '/icon-192.png' : '/images/Gurudeva.jpg';
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -80,11 +98,11 @@ export default function PwaInstallPrompt() {
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/60 bg-white shadow-2xl shadow-emerald-900/30">
+      <div className={`relative w-full max-w-md overflow-hidden rounded-3xl border border-white/60 bg-white shadow-2xl ${cardShadow}`}>
         {/* Header banner */}
-        <div className="relative overflow-hidden bg-gradient-to-br from-emerald-800 via-emerald-700 to-teal-600 px-6 pb-14 pt-7 text-center text-white">
-          <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-emerald-400/30 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-20 -left-12 h-48 w-48 rounded-full bg-teal-300/25 blur-3xl" />
+        <div className={`relative overflow-hidden ${heroClasses} px-6 pb-14 pt-7 text-center text-white`}>
+          <div className={`pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full ${accentGlow1} blur-3xl`} />
+          <div className={`pointer-events-none absolute -bottom-20 -left-12 h-48 w-48 rounded-full ${accentGlow2} blur-3xl`} />
           <button
             type="button"
             onClick={handleClose}
@@ -97,14 +115,14 @@ export default function PwaInstallPrompt() {
             <Sparkles className="h-3.5 w-3.5" />
             Install the App
           </div>
-          <h3 className="relative mt-3 font-serif text-2xl font-bold">Sanga Mahotsav</h3>
+          <h3 className="relative mt-3 font-serif text-2xl font-bold">{appName}</h3>
         </div>
 
         {/* App icon overlapping */}
         <div className="relative -mt-10 flex justify-center">
           <img
-            src="/images/Gurudeva.jpg"
-            alt="Sanga Mahotsav"
+            src={appIcon}
+            alt={appName}
             className="h-20 w-20 rounded-2xl border-4 border-white object-cover object-top shadow-xl"
           />
         </div>
@@ -112,27 +130,28 @@ export default function PwaInstallPrompt() {
         {/* Body */}
         <div className="px-6 pb-6 pt-4 text-center">
           <p className="text-sm text-muted-foreground">
-            Install the <span className="font-semibold text-emerald-800">Sanga Mahotsav</span> app on your{' '}
-            {iosHint ? 'iPhone' : 'device'} for a faster, full-screen experience with quick access to your devotee dashboard.
+            Install the <span className={`font-semibold ${isAdmin ? 'text-indigo-800' : 'text-emerald-800'}`}>{appName}</span> app on your{' '}
+            {iosHint ? 'iPhone' : 'device'} for a faster, full-screen experience with quick access to{' '}
+            {isAdmin ? 'the admin console' : 'your devotee dashboard'}.
           </p>
 
           <div className="mt-5 grid grid-cols-3 gap-2 text-center">
-            <div className="rounded-xl bg-emerald-50 p-3">
-              <Rocket className="mx-auto h-5 w-5 text-emerald-700" />
-              <p className="mt-1 text-[11px] font-medium text-emerald-900">Fast launch</p>
+            <div className={`rounded-xl ${tileBg} p-3`}>
+              <Rocket className={`mx-auto h-5 w-5 ${tileIcon}`} />
+              <p className={`mt-1 text-[11px] font-medium ${tileText}`}>Fast launch</p>
             </div>
-            <div className="rounded-xl bg-emerald-50 p-3">
-              <Wifi className="mx-auto h-5 w-5 text-emerald-700" />
-              <p className="mt-1 text-[11px] font-medium text-emerald-900">Works offline</p>
+            <div className={`rounded-xl ${tileBg} p-3`}>
+              <Wifi className={`mx-auto h-5 w-5 ${tileIcon}`} />
+              <p className={`mt-1 text-[11px] font-medium ${tileText}`}>Works offline</p>
             </div>
-            <div className="rounded-xl bg-emerald-50 p-3">
-              <Download className="mx-auto h-5 w-5 text-emerald-700" />
-              <p className="mt-1 text-[11px] font-medium text-emerald-900">Home screen</p>
+            <div className={`rounded-xl ${tileBg} p-3`}>
+              <Download className={`mx-auto h-5 w-5 ${tileIcon}`} />
+              <p className={`mt-1 text-[11px] font-medium ${tileText}`}>Home screen</p>
             </div>
           </div>
 
           {iosHint ? (
-            <div className="mt-5 rounded-xl border border-emerald-100 bg-emerald-50/60 p-3 text-left text-xs text-emerald-900">
+            <div className={`mt-5 rounded-xl border p-3 text-left text-xs ${isAdmin ? 'border-indigo-100 bg-indigo-50/60 text-indigo-900' : 'border-emerald-100 bg-emerald-50/60 text-emerald-900'}`}>
               <p className="font-semibold">To install on iPhone / iPad:</p>
               <p className="mt-1">
                 1. Tap the <Share className="inline h-3.5 w-3.5" /> Share button in Safari.
@@ -144,7 +163,7 @@ export default function PwaInstallPrompt() {
             <button
               type="button"
               onClick={handleInstall}
-              className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-700 to-teal-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-200/60 transition-all hover:from-emerald-800 hover:to-teal-700"
+              className={`mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white shadow-lg transition-all ${buttonClasses}`}
             >
               <Download className="h-4 w-4" />
               Install App
@@ -154,7 +173,7 @@ export default function PwaInstallPrompt() {
           <button
             type="button"
             onClick={handleDismiss}
-            className="mt-3 text-xs font-medium text-muted-foreground underline-offset-4 hover:text-emerald-800 hover:underline"
+            className={`mt-3 text-xs font-medium text-muted-foreground underline-offset-4 ${dismissHover} hover:underline`}
           >
             Maybe later
           </button>

@@ -1,4 +1,5 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
 
 import PublicLayout from '@/layouts/PublicLayout';
 import AdminLayout from '@/layouts/AdminLayout';
@@ -25,6 +26,21 @@ import Attendance from '@/pages/admin/Attendance';
 import PwaInstallPrompt from '@/components/PwaInstallPrompt';
 
 export default function App() {
+  const location = useLocation();
+  const isAdmin = location.pathname.startsWith('/admin');
+
+  // Swap the PWA manifest/theme-color so admins install a distinct "Admin Dashboard" app.
+  useEffect(() => {
+    const manifestLink = document.querySelector('link[rel="manifest"]');
+    const themeMeta = document.querySelector('meta[name="theme-color"]');
+    if (manifestLink) {
+      manifestLink.setAttribute('href', isAdmin ? '/admin-manifest.webmanifest' : '/manifest.webmanifest');
+    }
+    if (themeMeta) {
+      themeMeta.setAttribute('content', isAdmin ? '#312e81' : '#047857');
+    }
+  }, [isAdmin]);
+
   return (
     <>
     <Routes>
@@ -64,7 +80,7 @@ export default function App() {
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
-    <PwaInstallPrompt />
+    <PwaInstallPrompt isAdmin={isAdmin} />
     </>
   );
 }
