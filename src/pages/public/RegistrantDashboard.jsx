@@ -25,6 +25,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Modal } from '@/components/ui/modal';
 import { cn, currency } from '@/lib/utils';
+import QRCode from 'qrcode';
 
 const FAMILY_RELATIONSHIPS = [
   'Spouse',
@@ -59,6 +60,7 @@ export default function RegistrantDashboard() {
   const [relationshipValues, setRelationshipValues] = useState({});
   const [relationshipSaving, setRelationshipSaving] = useState({});
   const [relationshipMessage, setRelationshipMessage] = useState('');
+  const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [screenshotMessage, setScreenshotMessage] = useState('');
   const [feedbackForm, setFeedbackForm] = useState({ name: '', mobileNumber: '', overallRating: 0, suggestions: '' });
   const [feedbackRating, setFeedbackRating] = useState(0);
@@ -88,6 +90,9 @@ export default function RegistrantDashboard() {
       try {
         const { data } = await api.get('/registrant-auth/me');
         setProfile(data.data);
+        if (data.data.checkinToken) {
+          setQrCodeUrl(await QRCode.toDataURL(data.data.checkinToken, { width: 240, margin: 2 }));
+        }
         const nextPhoto = data.data.profilePhoto || '';
         setProfilePhoto(nextPhoto);
         setShowProfilePhotoModal(!nextPhoto);
@@ -441,31 +446,47 @@ export default function RegistrantDashboard() {
                   <CardTitle>Basic Details</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3 text-sm">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div>
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <div className="grid gap-4 md:col-span-2 md:grid-cols-2">
+                      <div>
                       <p className="text-muted-foreground text-xs">Name</p>
                       <p className="font-medium">{profile?.name}</p>
-                    </div>
-                    <div>
+                      </div>
+                      <div>
                       <p className="text-muted-foreground text-xs">Initiated Name</p>
                       <p className="font-medium">{profile?.initiatedName || '-'}</p>
-                    </div>
-                    <div>
+                      </div>
+                      <div>
                       <p className="text-muted-foreground text-xs">Age</p>
                       <p className="font-medium">{profile?.age}</p>
-                    </div>
-                    <div>
+                      </div>
+                      <div>
                       <p className="text-muted-foreground text-xs">Category</p>
                       <p className="font-medium">{profile?.devoteeCategory}</p>
-                    </div>
-                    <div>
+                      </div>
+                      <div>
                       <p className="text-muted-foreground text-xs">Mobile</p>
                       <p className="font-medium">{profile?.mobileNumber}</p>
-                    </div>
-                    <div>
+                      </div>
+                      <div>
                       <p className="text-muted-foreground text-xs">Coming From</p>
                       <p className="font-medium">{profile?.comingFrom}</p>
+                      </div>
                     </div>
+
+                  {qrCodeUrl && (
+                    <details className="rounded-md border border-emerald-200 bg-emerald-50/50 p-3 text-center">
+                      <summary className="cursor-pointer list-none font-semibold text-emerald-800">
+                        Event Check-in QR
+                        <span className="ml-2 text-xs font-normal text-emerald-700">(Show at registration desk)</span>
+                      </summary>
+                      <div className="mt-3 flex flex-col items-center gap-2 border-t border-emerald-200 pt-3">
+                        <p className="text-xs text-muted-foreground">Expand this section when you arrive for quick check-in.</p>
+                        <img src={qrCodeUrl} alt="Event check-in QR code" className="h-48 w-48 rounded border bg-white p-2" />
+                      </div>
+                    </details>
+                  )}
+
                   </div>
                   
                     {profile?.familyMembers && profile.familyMembers.length > 0 && (

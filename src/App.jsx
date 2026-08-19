@@ -21,9 +21,12 @@ import Donations from '@/pages/admin/Donations';
 import SmsCampaigns from '@/pages/admin/SmsCampaigns';
 import FeedbackList from '@/pages/admin/FeedbackList';
 import Seva from '@/pages/admin/Seva';
+import Attendance from '@/pages/admin/Attendance';
+import PwaInstallPrompt from '@/components/PwaInstallPrompt';
 
 export default function App() {
   return (
+    <>
     <Routes>
       {/* Public */}
       <Route element={<PublicLayout />}>
@@ -49,6 +52,7 @@ export default function App() {
         <Route index element={<Dashboard />} />
         <Route path="registrations" element={<Registrations />} />
         <Route path="registrations/:id" element={<RegistrationDetails />} />
+        <Route path="attendance" element={<Attendance />} />
         <Route path="accommodation" element={<Accommodation />} />
         <Route path="hotels" element={<Hotels />} />
         <Route path="seminar-hall" element={<SeminarHall />} />
@@ -60,5 +64,7 @@ export default function App() {
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    <PwaInstallPrompt />
+    </>
   );
 }

@@ -10,6 +10,7 @@ import {
   Star,
   Heart,
   HandHelping,
+  UserCheck,
   LogOut,
   Menu,
   X,
@@ -21,6 +22,7 @@ import { cn } from '@/lib/utils';
 const NAV = [
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/admin/registrations', label: 'Registrations', icon: Users },
+  { to: '/admin/attendance', label: 'Attendance Desk', icon: UserCheck },
   { to: '/admin/accommodation', label: 'Accommodation', icon: BedDouble },
   { to: '/admin/hotels', label: 'Hotels', icon: Hotel },
   { to: '/admin/seminar-hall', label: 'Seminar Hall', icon: Building2 },
