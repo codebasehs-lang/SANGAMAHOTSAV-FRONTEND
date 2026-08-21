@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Trash2, CheckCircle2, CircleAlert, X, MapPin, CalendarDays } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, CircleAlert, X, MapPin, CalendarDays, Lock, Sparkles, PhoneCall } from 'lucide-react';
 
 import { Country, State, City } from 'country-state-city';
 import api, { getErrorMessage } from '@/lib/api';
@@ -661,17 +661,37 @@ export default function Registration() {
 
   if (registrationStatusLoaded && registrationClosed) {
     return (
-      <div className="container max-w-2xl py-16">
-        <Card>
-          <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
-            <CircleAlert className="h-16 w-16 text-amber-600" />
-            <h2 className="text-2xl font-bold">Registrations Closed</h2>
-            <p className="whitespace-pre-line text-muted-foreground">
+      <div className="flex min-h-[80vh] items-center justify-center bg-gradient-to-br from-orange-50 via-amber-50 to-rose-50 px-4 py-16">
+        <div className="relative w-full max-w-xl overflow-hidden rounded-3xl border-2 border-amber-300/60 bg-white shadow-[0_30px_90px_rgba(180,83,9,0.25)]">
+          {/* Decorative gradient accent bar */}
+          <div className="h-2.5 w-full bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500" />
+
+          <div className="flex flex-col items-center gap-5 px-6 py-12 text-center sm:px-10">
+            <div className="relative flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-amber-100 to-orange-100 ring-8 ring-amber-100/70">
+              <Lock className="h-11 w-11 text-orange-600" />
+              <Sparkles className="absolute -right-1 -top-1 h-6 w-6 text-amber-500" />
+            </div>
+
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-4 py-1 text-xs font-bold uppercase tracking-wide text-red-700">
+              <CircleAlert className="h-3.5 w-3.5" /> Registrations Closed
+            </span>
+
+            <h2 className="font-serif text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
+              Hare Krishna! 🙏
+            </h2>
+
+            
+            <p className="whitespace-pre-line text-lg font-bold leading-8 text-orange-700 sm:text-xl">
               {registrationClosedMessage ||
                 'Registrations are currently closed. Please check back later.'}
             </p>
-          </CardContent>
-        </Card>
+
+            <div className="mt-2 flex items-center gap-2 rounded-xl bg-slate-50 px-4 py-3 text-sm font-medium text-slate-600">
+              <PhoneCall className="h-4 w-4 shrink-0 text-orange-500" />
+              Reach out to your facilitator or the organizing committee for assistance.
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
