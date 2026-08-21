@@ -14,6 +14,7 @@ import {
   LogOut,
   Menu,
   X,
+  Settings,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -30,6 +31,7 @@ const NAV = [
   { to: '/admin/seva', label: 'Seva', icon: HandHelping },
   { to: '/admin/sms', label: 'SMS Campaigns', icon: MessageSquare },
   { to: '/admin/feedback', label: 'Feedback', icon: Star },
+  { to: '/admin/registration-settings', label: 'Registration Settings', icon: Settings },
 ];
 
 function SidebarNav({ onLinkClick }) {

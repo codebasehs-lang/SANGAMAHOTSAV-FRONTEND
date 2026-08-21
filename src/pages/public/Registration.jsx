@@ -227,6 +227,9 @@ export default function Registration() {
   const [showQrModal, setShowQrModal] = useState(false);
   const [showMapModal, setShowMapModal] = useState(false);
   const [availabilityRows, setAvailabilityRows] = useState([]);
+  const [registrationClosed, setRegistrationClosed] = useState(false);
+  const [registrationClosedMessage, setRegistrationClosedMessage] = useState('');
+  const [registrationStatusLoaded, setRegistrationStatusLoaded] = useState(false);
   const arrivalDatePickerRef = useRef(null);
   const departureDatePickerRef = useRef(null);
   const paymentSectionRef = useRef(null);
@@ -326,6 +329,19 @@ export default function Registration() {
       .catch(() => {
         setAvailabilityRows([]);
       });
+  }, []);
+
+  useEffect(() => {
+    api
+      .get('/registration-settings/public')
+      .then(({ data }) => {
+        setRegistrationClosed(!data.data.isOpen);
+        setRegistrationClosedMessage(data.data.closedMessage || '');
+      })
+      .catch(() => {
+        setRegistrationClosed(false);
+      })
+      .finally(() => setRegistrationStatusLoaded(true));
   }, []);
 
   // Comprehensive breakdown of all amount components shown below the total field
@@ -641,6 +657,23 @@ export default function Registration() {
       }
       setShowErrorToast(true);
     }
+  }
+
+  if (registrationStatusLoaded && registrationClosed) {
+    return (
+      <div className="container max-w-2xl py-16">
+        <Card>
+          <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
+            <CircleAlert className="h-16 w-16 text-amber-600" />
+            <h2 className="text-2xl font-bold">Registrations Closed</h2>
+            <p className="whitespace-pre-line text-muted-foreground">
+              {registrationClosedMessage ||
+                'Registrations are currently closed. Please check back later.'}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   if (submitted) {
