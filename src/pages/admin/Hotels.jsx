@@ -247,7 +247,7 @@ export default function Hotels() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">Hotels</h1>
           <p className="text-muted-foreground">
@@ -255,7 +255,15 @@ export default function Hotels() {
           </p>
         </div>
         {!isViewer && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={handleDownloadTemplate}
+              className="gap-2 text-indigo-600 border-indigo-200 bg-indigo-50/50 hover:bg-indigo-100 shadow-sm"
+            >
+              <FileSpreadsheet className="h-4 w-4 text-indigo-600" />
+              Download Sample Template (.xlsx)
+            </Button>
             <Button variant="outline" onClick={openImportModal} className="gap-2 shadow-sm">
               <Upload className="h-4 w-4" /> Import Excel
             </Button>
@@ -357,7 +365,27 @@ export default function Hotels() {
           </Card>
         ))}
         {hotels.length === 0 && (
-          <p className="text-muted-foreground">No hotels added yet.</p>
+          <div className="col-span-2 flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center bg-white/60">
+            <FileSpreadsheet className="h-10 w-10 text-indigo-400 mb-2" />
+            <h3 className="text-base font-semibold text-slate-800">No hotels added yet</h3>
+            <p className="text-sm text-slate-500 max-w-md mt-1 mb-4">
+              Add hotels individually or download our sample Excel template to bulk upload all hotels and rooms at once.
+            </p>
+            {!isViewer && (
+              <div className="flex flex-wrap gap-2 justify-center">
+                <Button
+                  variant="outline"
+                  onClick={handleDownloadTemplate}
+                  className="gap-2 text-indigo-600 border-indigo-200 bg-indigo-50/50 hover:bg-indigo-100"
+                >
+                  <Download className="h-4 w-4" /> Download Sample Template
+                </Button>
+                <Button onClick={openImportModal} className="gap-2">
+                  <Upload className="h-4 w-4" /> Import Excel
+                </Button>
+              </div>
+            )}
+          </div>
         )}
       </div>
 
