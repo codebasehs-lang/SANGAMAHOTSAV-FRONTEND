@@ -15,6 +15,7 @@ import Login from '@/pages/admin/Login';
 import Dashboard from '@/pages/admin/Dashboard';
 import Registrations from '@/pages/admin/Registrations';
 import RegistrationDetails from '@/pages/admin/RegistrationDetails';
+import Children from '@/pages/admin/Children';
 import Accommodation from '@/pages/admin/Accommodation';
 import Hotels from '@/pages/admin/Hotels';
 import SeminarHall from '@/pages/admin/SeminarHall';
@@ -68,6 +69,7 @@ export default function App() {
       >
         <Route index element={<Dashboard />} />
         <Route path="registrations" element={<Registrations />} />
+        <Route path="children" element={<Children />} />
         <Route path="registrations/:id" element={<RegistrationDetails />} />
         <Route path="attendance" element={<Attendance />} />
         <Route path="accommodation" element={<Accommodation />} />

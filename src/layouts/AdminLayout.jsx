@@ -3,6 +3,7 @@ import { useState } from 'react';
 import {
   LayoutDashboard,
   Users,
+  Baby,
   BedDouble,
   Hotel,
   Building2,
@@ -23,6 +24,7 @@ import { cn } from '@/lib/utils';
 const NAV = [
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/admin/registrations', label: 'Registrations', icon: Users },
+  { to: '/admin/children', label: 'Children', icon: Baby },
   { to: '/admin/attendance', label: 'Attendance Desk', icon: UserCheck },
   { to: '/admin/accommodation', label: 'Accommodation', icon: BedDouble },
   { to: '/admin/hotels', label: 'Hotels', icon: Hotel },
