@@ -25,6 +25,7 @@ import FeedbackList from '@/pages/admin/FeedbackList';
 import Seva from '@/pages/admin/Seva';
 import Attendance from '@/pages/admin/Attendance';
 import RegistrationSettings from '@/pages/admin/RegistrationSettings';
+import HelpCenter from '@/pages/admin/HelpCenter';
 import PwaInstallPrompt from '@/components/PwaInstallPrompt';
 
 export default function App() {
@@ -80,6 +81,7 @@ export default function App() {
         <Route path="feedback" element={<FeedbackList />} />
         <Route path="seva" element={<Seva />} />
         <Route path="registration-settings" element={<RegistrationSettings />} />
+        <Route path="help" element={<HelpCenter />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

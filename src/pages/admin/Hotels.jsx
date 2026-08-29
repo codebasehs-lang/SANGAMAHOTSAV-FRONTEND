@@ -1,5 +1,15 @@
 import { useEffect, useState } from 'react';
-import { Plus, MapPin, Pencil, Trash2 } from 'lucide-react';
+import {
+  Plus,
+  MapPin,
+  Pencil,
+  Trash2,
+  Upload,
+  Download,
+  FileSpreadsheet,
+  CheckCircle2,
+  AlertCircle,
+} from 'lucide-react';
 
 import api, { getErrorMessage } from '@/lib/api';
 import { SHARED_ACCOMMODATION, FAMILY_ACCOMMODATION } from '@/lib/constants';
@@ -14,7 +24,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { FullPageSpinner } from '@/components/Spinner';
+import { FullPageSpinner, Spinner } from '@/components/Spinner';
 import { useAuth } from '@/context/AuthContext';
 
 const EMPTY = { hotelName: '', hotelAddress: '', hotelMapLink: '' };
@@ -47,6 +57,13 @@ export default function Hotels() {
   const [roomForm, setRoomForm] = useState(EMPTY_ROOM);
   const [roomSaving, setRoomSaving] = useState(false);
 
+  // Excel Import state
+  const [importOpen, setImportOpen] = useState(false);
+  const [importFile, setImportFile] = useState(null);
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState('');
+  const [importResult, setImportResult] = useState(null);
+
   async function load() {
     try {
       const { data } = await api.get('/hotels');
@@ -61,6 +78,60 @@ export default function Hotels() {
   useEffect(() => {
     load();
   }, []);
+
+  function openImportModal() {
+    setImportFile(null);
+    setImportError('');
+    setImportResult(null);
+    setImportOpen(true);
+  }
+
+  async function handleDownloadTemplate() {
+    setImportError('');
+    try {
+      const response = await api.get('/hotels/import-template', {
+        responseType: 'blob',
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'hotels_rooms_import_template.xlsx');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      setImportError(getErrorMessage(err));
+    }
+  }
+
+  async function handleImportExcel(e) {
+    e.preventDefault();
+    if (!importFile) {
+      setImportError('Please select an Excel (.xlsx, .xls) or CSV file to import.');
+      return;
+    }
+
+    setImporting(true);
+    setImportError('');
+    setImportResult(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', importFile);
+
+      const response = await api.post('/hotels/import-excel', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      setImportResult(response.data.data);
+      setImportFile(null);
+      load();
+    } catch (err) {
+      setImportError(getErrorMessage(err));
+    } finally {
+      setImporting(false);
+    }
+  }
 
   function openCreate() {
     setEditing(null);
@@ -184,9 +255,14 @@ export default function Hotels() {
           </p>
         </div>
         {!isViewer && (
-          <Button onClick={openCreate}>
-            <Plus className="h-4 w-4" /> Add Hotel
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={openImportModal} className="gap-2 shadow-sm">
+              <Upload className="h-4 w-4" /> Import Excel
+            </Button>
+            <Button onClick={openCreate} className="gap-2">
+              <Plus className="h-4 w-4" /> Add Hotel
+            </Button>
+          </div>
         )}
       </div>
 
@@ -393,6 +469,118 @@ export default function Hotels() {
               {roomSaving ? 'Saving...' : 'Save Room'}
             </Button>
           </div>
+        </div>
+      </Modal>
+
+      {/* Excel Import Modal */}
+      <Modal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        title="Import Hotels & Rooms (Excel)"
+      >
+        <div className="space-y-4">
+          <div className="rounded-lg bg-slate-50 p-3 ring-1 ring-slate-200 text-xs text-slate-600 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-slate-800">Excel Format Instructions:</span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleDownloadTemplate}
+                className="gap-1.5 text-xs text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+              >
+                <Download className="h-3.5 w-3.5" /> Sample Template (.xlsx)
+              </Button>
+            </div>
+            <p>
+              Your Excel file can list hotels and multiple room numbers in each row.
+            </p>
+            <p className="font-mono text-[11px] text-slate-700 bg-white p-2 rounded border">
+              Headers: <strong>Hotel Name</strong>, <strong>Hotel Address</strong>, <strong>Google Map Link</strong>, <strong>Room No</strong>, <strong>Room Type</strong>, <strong>Room Capacity</strong>, <strong>Current Occupancy</strong>, <strong>Notes</strong>, <strong>Active</strong>
+            </p>
+            <p className="text-[11px] text-slate-500">
+              Allowed Room Types: DORMITORY, NON_AC_SHARING, AC_SHARING, DELUXE_AC, PREMIUM_AC
+            </p>
+          </div>
+
+          {importError && (
+            <div className="rounded-md bg-red-50 p-3 text-xs text-red-700 ring-1 ring-red-200">
+              {importError}
+            </div>
+          )}
+
+          {importResult && (
+            <div className="rounded-lg bg-emerald-50 p-4 ring-1 ring-emerald-200 space-y-3">
+              <div className="flex items-center gap-2 text-emerald-800 font-semibold text-sm">
+                <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                Import Completed Successfully!
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-xs text-slate-700">
+                <div className="rounded bg-white p-2 border">
+                  <span className="text-slate-500 block">Hotels Created:</span>
+                  <span className="text-lg font-bold text-slate-900">{importResult.hotelsCreated}</span>
+                </div>
+                <div className="rounded bg-white p-2 border">
+                  <span className="text-slate-500 block">Hotels Updated:</span>
+                  <span className="text-lg font-bold text-slate-900">{importResult.hotelsUpdated}</span>
+                </div>
+                <div className="rounded bg-white p-2 border">
+                  <span className="text-slate-500 block">Rooms Created:</span>
+                  <span className="text-lg font-bold text-emerald-600">{importResult.roomsCreated}</span>
+                </div>
+                <div className="rounded bg-white p-2 border">
+                  <span className="text-slate-500 block">Rooms Updated:</span>
+                  <span className="text-lg font-bold text-blue-600">{importResult.roomsUpdated}</span>
+                </div>
+              </div>
+
+              {importResult.errors && importResult.errors.length > 0 && (
+                <div className="mt-2 text-xs">
+                  <span className="font-semibold text-amber-800 flex items-center gap-1 mb-1">
+                    <AlertCircle className="h-4 w-4" /> Warnings / Row issues:
+                  </span>
+                  <ul className="max-h-24 overflow-y-auto space-y-1 bg-white p-2 rounded border text-amber-900 text-[11px]">
+                    {importResult.errors.map((err, i) => (
+                      <li key={i}>• {err}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
+          <form onSubmit={handleImportExcel} className="space-y-3 pt-2">
+            <div className="space-y-1.5">
+              <Label>Select Excel / CSV File</Label>
+              <Input
+                type="file"
+                accept=".xlsx, .xls, .csv"
+                onChange={(e) => {
+                  setImportFile(e.target.files[0] || null);
+                  setImportError('');
+                  setImportResult(null);
+                }}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3">
+              <Button type="button" variant="outline" onClick={() => setImportOpen(false)}>
+                Close
+              </Button>
+              <Button type="submit" disabled={importing || !importFile} className="gap-2">
+                {importing ? (
+                  <>
+                    <Spinner className="h-4 w-4 text-current" /> Importing...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-4 w-4" /> Upload & Process
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
         </div>
       </Modal>
     </div>

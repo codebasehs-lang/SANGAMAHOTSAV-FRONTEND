@@ -16,6 +16,7 @@ import {
   Menu,
   X,
   Settings,
+  HelpCircle,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -34,6 +35,7 @@ const NAV = [
   { to: '/admin/sms', label: 'SMS Campaigns', icon: MessageSquare },
   { to: '/admin/feedback', label: 'Feedback', icon: Star },
   { to: '/admin/registration-settings', label: 'Registration Settings', icon: Settings },
+  { to: '/admin/help', label: 'Help Center', icon: HelpCircle },
 ];
 
 function SidebarNav({ onLinkClick }) {
