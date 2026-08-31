@@ -118,7 +118,7 @@ export default function AdminLayout() {
       </aside>
 
       {/* Main */}
-      <div className="flex flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 items-center justify-between border-b border-indigo-100 bg-white/80 px-4 shadow-sm backdrop-blur-xl md:h-16 md:px-6">
           {/* Hamburger — mobile only */}
           <button
@@ -156,7 +156,7 @@ export default function AdminLayout() {
           </div>
         </header>
 
-        <main className="flex-1 p-4 md:p-6">
+        <main className="min-w-0 flex-1 p-4 md:p-6">
           <Outlet />
         </main>
       </div>

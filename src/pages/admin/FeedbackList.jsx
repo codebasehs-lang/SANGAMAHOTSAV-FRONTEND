@@ -140,24 +140,24 @@ export default function FeedbackList() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
-                  <TableHead className="hidden sm:table-cell">Mobile</TableHead>
+                  <TableHead>Mobile</TableHead>
                   <TableHead>Rating</TableHead>
                   <TableHead>Suggestions</TableHead>
-                  <TableHead className="hidden md:table-cell">Date</TableHead>
+                  <TableHead>Date</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {rows.map((f) => (
                   <TableRow key={f.id}>
                     <TableCell className="font-medium">{f.name}</TableCell>
-                    <TableCell className="hidden sm:table-cell">{f.mobileNumber}</TableCell>
+                    <TableCell>{f.mobileNumber}</TableCell>
                     <TableCell>
                       <Stars count={f.overallRating} />
                     </TableCell>
                     <TableCell className="max-w-xs truncate">
                       {f.suggestions || '-'}
                     </TableCell>
-                    <TableCell className="hidden md:table-cell">{formatDate(f.createdAt)}</TableCell>
+                    <TableCell>{formatDate(f.createdAt)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

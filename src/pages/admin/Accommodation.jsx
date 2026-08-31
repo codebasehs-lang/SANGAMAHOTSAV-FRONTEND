@@ -559,10 +559,10 @@ export default function Accommodation() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
-                  <TableHead className="hidden sm:table-cell">Mobile</TableHead>
-                  <TableHead className="hidden md:table-cell">Arrival</TableHead>
-                  <TableHead className="hidden md:table-cell">Room Type</TableHead>
-                  <TableHead className="hidden sm:table-cell">Hotel / Room</TableHead>
+                  <TableHead>Mobile</TableHead>
+                  <TableHead>Arrival</TableHead>
+                  <TableHead>Room Type</TableHead>
+                  <TableHead>Hotel / Room</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Action</TableHead>
                 </TableRow>
@@ -571,10 +571,10 @@ export default function Accommodation() {
                 {rows.map((r) => (
                   <TableRow key={r.id}>
                     <TableCell className="font-medium">{r.name}</TableCell>
-                    <TableCell className="hidden sm:table-cell">{r.mobileNumber}</TableCell>
-                    <TableCell className="hidden md:table-cell">{formatDate(r.arrivalDate)}</TableCell>
-                    <TableCell className="hidden md:table-cell">{getRoomType(r)}</TableCell>
-                    <TableCell className="hidden sm:table-cell">
+                    <TableCell>{r.mobileNumber}</TableCell>
+                    <TableCell>{formatDate(r.arrivalDate)}</TableCell>
+                    <TableCell>{getRoomType(r)}</TableCell>
+                    <TableCell>
                       {r.assignment ? (
                         <div className="space-y-0.5 text-sm">
                           <div>{r.assignment.hotelName} / {r.assignment.roomNumber}</div>

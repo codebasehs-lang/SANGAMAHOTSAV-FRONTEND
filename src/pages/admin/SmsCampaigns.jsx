@@ -328,28 +328,28 @@ export default function SmsCampaigns() {
               <TableHeader>
                 <TableRow>
                   <TableHead>ID</TableHead>
-                  <TableHead className="hidden md:table-cell">Channel</TableHead>
+                  <TableHead>Channel</TableHead>
                   <TableHead>Type</TableHead>
-                  <TableHead className="hidden sm:table-cell">Recipients</TableHead>
+                  <TableHead>Recipients</TableHead>
                   <TableHead>Sent</TableHead>
-                  <TableHead className="hidden sm:table-cell">Failed</TableHead>
+                  <TableHead>Failed</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="hidden md:table-cell">Date</TableHead>
+                  <TableHead>Date</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {campaigns.map((c) => (
                   <TableRow key={c.id}>
                     <TableCell>#{c.id}</TableCell>
-                    <TableCell className="hidden md:table-cell">{c.channel || 'SMS'}</TableCell>
+                    <TableCell>{c.channel || 'SMS'}</TableCell>
                     <TableCell>{humanize(c.type)}</TableCell>
-                    <TableCell className="hidden sm:table-cell">{c.totalRecipients}</TableCell>
+                    <TableCell>{c.totalRecipients}</TableCell>
                     <TableCell>{c.sentCount}</TableCell>
-                    <TableCell className="hidden sm:table-cell">{c.failedCount}</TableCell>
+                    <TableCell>{c.failedCount}</TableCell>
                     <TableCell>
                       <StatusBadge status={c.status} />
                     </TableCell>
-                    <TableCell className="hidden md:table-cell">{formatDate(c.createdAt)}</TableCell>
+                    <TableCell>{formatDate(c.createdAt)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

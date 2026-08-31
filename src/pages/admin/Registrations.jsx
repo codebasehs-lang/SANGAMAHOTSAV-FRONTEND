@@ -298,11 +298,11 @@ export default function Registrations() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
-                  <TableHead className="hidden sm:table-cell">Mobile</TableHead>
-                  <TableHead className="hidden lg:table-cell">From</TableHead>
-                  <TableHead className="hidden md:table-cell">Category</TableHead>
-                  <TableHead className="hidden md:table-cell">Arrival</TableHead>
-                  <TableHead className="hidden lg:table-cell">Accommodation</TableHead>
+                  <TableHead>Mobile</TableHead>
+                  <TableHead>From</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Arrival</TableHead>
+                  <TableHead>Accommodation</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-center">Payment</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -312,11 +312,11 @@ export default function Registrations() {
                 {rows.map((r) => (
                   <TableRow key={r.id}>
                     <TableCell className="font-medium">{r.name}</TableCell>
-                    <TableCell className="hidden sm:table-cell">{r.mobileNumber}</TableCell>
-                    <TableCell className="hidden lg:table-cell">{r.comingFrom}</TableCell>
-                    <TableCell className="hidden md:table-cell">{humanize(r.devoteeCategory)}</TableCell>
-                    <TableCell className="hidden md:table-cell">{formatDate(r.arrivalDate)}</TableCell>
-                    <TableCell className="hidden lg:table-cell">
+                    <TableCell>{r.mobileNumber}</TableCell>
+                    <TableCell>{r.comingFrom}</TableCell>
+                    <TableCell>{humanize(r.devoteeCategory)}</TableCell>
+                    <TableCell>{formatDate(r.arrivalDate)}</TableCell>
+                    <TableCell>
                       <AccommodationCell reg={r} />
                     </TableCell>
                     <TableCell>

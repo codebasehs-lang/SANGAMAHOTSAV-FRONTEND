@@ -179,15 +179,15 @@ export default function Seva() {
 
       {/* By Devotee — table */}
       {view === 'byDevotion' && (
-        <div className="max-h-[65vh] overflow-auto rounded-xl border bg-white shadow-sm">
-          <table className="w-full text-sm">
+        <div className="max-h-[65vh] overflow-auto rounded-xl border bg-white shadow-sm [-webkit-overflow-scrolling:touch]">
+          <table className="w-full min-w-max text-sm">
             <thead className="sticky top-0 z-10">
               <tr className="border-b bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
-                <th className="px-4 py-3 text-left font-semibold">#</th>
-                <th className="px-4 py-3 text-left font-semibold">Name</th>
-                <th className="px-4 py-3 text-left font-semibold">Gender</th>
-                <th className="px-4 py-3 text-left font-semibold">Mobile</th>
-                <th className="px-4 py-3 text-left font-semibold">Chosen Sevas</th>
+                <th className="whitespace-nowrap px-4 py-3 text-left font-semibold">#</th>
+                <th className="whitespace-nowrap px-4 py-3 text-left font-semibold">Name</th>
+                <th className="whitespace-nowrap px-4 py-3 text-left font-semibold">Gender</th>
+                <th className="whitespace-nowrap px-4 py-3 text-left font-semibold">Mobile</th>
+                <th className="whitespace-nowrap px-4 py-3 text-left font-semibold">Chosen Sevas</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -211,7 +211,7 @@ export default function Seva() {
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">{GENDER_LABEL[d.gender] ?? d.gender ?? '—'}</td>
                   <td className="px-4 py-3 text-muted-foreground">{d.mobileNumber}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 max-w-md">
                     <div className="flex flex-wrap gap-1">
                       {d.services.map((s, si) => {
                         const accent = CARD_ACCENTS[si % CARD_ACCENTS.length];
