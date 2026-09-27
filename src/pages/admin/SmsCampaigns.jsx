@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Send, MessageSquare, Search, X } from 'lucide-react';
 
 import api, { getErrorMessage } from '@/lib/api';
-import { formatDate, humanize } from '@/lib/utils';
+import { formatDate, humanize, currency } from '@/lib/utils';
 import { SMS_CAMPAIGN_TYPE } from '@/lib/constants';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -42,6 +42,9 @@ export default function SmsCampaigns() {
   const [message, setMessage] = useState('');
   const [audience, setAudience] = useState('ALL'); // 'ALL' | 'SELECTED'
   const [selected, setSelected] = useState([]); // [{ id, name, mobileNumber }]
+  const [donationRecipients, setDonationRecipients] = useState([]);
+  const [loadingDonationRecipients, setLoadingDonationRecipients] = useState(false);
+  const [donationRecipientError, setDonationRecipientError] = useState('');
 
   const [search, setSearch] = useState('');
   const [results, setResults] = useState([]);
@@ -70,6 +73,32 @@ export default function SmsCampaigns() {
   useEffect(() => {
     loadCampaigns();
   }, []);
+
+  useEffect(() => {
+    if (type !== 'DONATION') return undefined;
+
+    let active = true;
+    setLoadingDonationRecipients(true);
+    setDonationRecipientError('');
+    api
+      .get('/sms/donation-only-recipients')
+      .then(({ data }) => {
+        if (active) setDonationRecipients(data.data);
+      })
+      .catch((err) => {
+        if (active) {
+          setDonationRecipients([]);
+          setDonationRecipientError(getErrorMessage(err));
+        }
+      })
+      .finally(() => {
+        if (active) setLoadingDonationRecipients(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [type]);
 
   const runSearch = useCallback(async () => {
     if (audience !== 'SELECTED' || search.trim().length < 2) {
@@ -112,7 +141,7 @@ export default function SmsCampaigns() {
     try {
       const payload = { type, channel };
       if (type === 'CUSTOM' || isApplicationChannel) payload.message = message;
-      if (!isApplicationChannel && audience === 'SELECTED')
+      if (type === 'DONATION' || (!isApplicationChannel && audience === 'SELECTED'))
         payload.registrationIds = selected.map((r) => r.id);
 
       const { data } = await api.post('/sms/campaigns', payload);
@@ -133,6 +162,8 @@ export default function SmsCampaigns() {
     sending ||
     (type === 'CUSTOM' && !message.trim()) ||
     (isApplicationChannel && !message.trim()) ||
+    (type === 'DONATION' &&
+      (loadingDonationRecipients || selected.length === 0)) ||
     (audience === 'SELECTED' && selected.length === 0);
 
   return (
@@ -156,6 +187,7 @@ export default function SmsCampaigns() {
               <Select
                 options={MESSAGE_CHANNEL_OPTIONS}
                 value={channel}
+                disabled={type === 'DONATION'}
                 onChange={(e) => {
                   const nextChannel = e.target.value;
                   setChannel(nextChannel);
@@ -173,7 +205,17 @@ export default function SmsCampaigns() {
               <Select
                 options={SMS_CAMPAIGN_TYPE}
                 value={type}
-                onChange={(e) => setType(e.target.value)}
+                onChange={(e) => {
+                  const nextType = e.target.value;
+                  setType(nextType);
+                  setSelected([]);
+                  if (nextType === 'DONATION') {
+                    setChannel('WHATSAPP');
+                    setAudience('DONATION_ONLY');
+                  } else if (type === 'DONATION') {
+                    setAudience('ALL');
+                  }
+                }}
               />
             </div>
             <div className="space-y-1.5">
@@ -182,13 +224,123 @@ export default function SmsCampaigns() {
                 options={[
                   { value: 'ALL', label: 'All eligible devotees' },
                   { value: 'SELECTED', label: 'Selected recipients' },
+                  { value: 'DONATION_ONLY', label: 'Approved donors not attending' },
                 ]}
                 value={audience}
-                onChange={(e) => setAudience(e.target.value)}
+                onChange={(e) => {
+                  const nextAudience = e.target.value;
+                  setAudience(nextAudience);
+                  setSelected([]);
+                  if (nextAudience === 'DONATION_ONLY') {
+                    setType('DONATION');
+                    setChannel('WHATSAPP');
+                  } else if (audience === 'DONATION_ONLY') {
+                    setType('ACCOMMODATION');
+                  }
+                }}
                 disabled={isApplicationChannel}
               />
             </div>
           </div>
+
+          {type === 'DONATION' && (
+            <div className="space-y-3 rounded-md border p-3">
+              <div>
+                <p className="font-medium">Donation thank-you recipients</p>
+                <p className="text-sm text-muted-foreground">
+                  Approved registrations marked as not attending, with at least one
+                  donation item. Select the people who should receive the Meta
+                  donation template.
+                </p>
+                <p className="mt-2 whitespace-pre-line rounded-md bg-muted p-3 text-sm">
+                  {`Hare Krishna! 🙏
+
+Dear {{1}},
+
+Thank you for your generous donation towards Sanga Mahotsav 2026. Though you will not be attending the event, your support is greatly appreciated and helps make this festival possible.
+
+We pray for the blessings of Sri Sri Krishna Balaram upon you and your family.
+
+Sanga Mahotsav Management Committee 🙏`}
+                </p>
+              </div>
+              {donationRecipientError && (
+                <p className="text-sm text-destructive">{donationRecipientError}</p>
+              )}
+              {loadingDonationRecipients ? (
+                <div className="flex justify-center py-3">
+                  <Spinner className="h-5 w-5 text-primary" />
+                </div>
+              ) : (
+                <>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <Label>
+                      Eligible donors: {donationRecipients.length} · Selected:{' '}
+                      {selected.length}
+                    </Label>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={donationRecipients.length === 0}
+                        onClick={() =>
+                          setSelected(
+                            selected.length === donationRecipients.length
+                              ? []
+                              : donationRecipients.map(
+                                  ({ id, name, mobileNumber }) => ({
+                                    id,
+                                    name,
+                                    mobileNumber,
+                                  })
+                                )
+                          )
+                        }
+                      >
+                        {selected.length === donationRecipients.length &&
+                        donationRecipients.length > 0
+                          ? 'Clear selection'
+                          : 'Select all'}
+                      </Button>
+                    </div>
+                  </div>
+                  {donationRecipients.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No approved donation-only recipients found.
+                    </p>
+                  ) : (
+                    <div className="max-h-56 overflow-y-auto rounded-md border">
+                      {donationRecipients.map((recipient) => (
+                        <label
+                          key={recipient.id}
+                          className="flex cursor-pointer flex-wrap items-center gap-2 border-b px-3 py-2 text-sm last:border-b-0 hover:bg-accent sm:flex-nowrap"
+                        >
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4"
+                            checked={selected.some(
+                              (entry) => entry.id === recipient.id
+                            )}
+                            onChange={() => toggleRecipient(recipient)}
+                          />
+                          <span className="max-w-full truncate font-medium sm:max-w-[45%]">
+                            {recipient.name}
+                          </span>
+                          <span className="text-muted-foreground">
+                            {recipient.mobileNumber}
+                          </span>
+                          <span className="text-muted-foreground sm:ml-auto">
+                            Donation: {currency(recipient.donationAmount)}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
 
           {(type === 'CUSTOM' || isApplicationChannel) && (
             <div className="space-y-1.5">
@@ -281,7 +433,11 @@ export default function SmsCampaigns() {
           <div>
             <Button onClick={send} disabled={disableSend} className="w-full sm:w-auto">
               <Send className="h-4 w-4" />
-              {sending ? 'Sending...' : 'Send Campaign'}
+              {sending
+                ? 'Sending...'
+                : type === 'DONATION'
+                ? `Send donation thank-you (${selected.length})`
+                : 'Send Campaign'}
             </Button>
           </div>
         </CardContent>
