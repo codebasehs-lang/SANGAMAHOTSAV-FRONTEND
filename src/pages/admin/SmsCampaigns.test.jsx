@@ -24,6 +24,9 @@ beforeEach(() => {
     if (url === '/sms/not-staying-recipients') {
       return Promise.resolve({ data: { data: [attendee] } });
     }
+    if (url === '/registrations') {
+      return Promise.resolve({ data: { data: [donor, attendee] } });
+    }
     return Promise.resolve({ data: { data: [] } });
   });
   api.post.mockResolvedValue({
@@ -63,5 +66,45 @@ describe('targeted WhatsApp campaigns', () => {
     await waitFor(() => expect(screen.getByText('Attendee')).toBeInTheDocument());
     expect(screen.getByRole('checkbox')).not.toBeChecked();
     expect(screen.getByRole('button', { name: 'Send non-staying confirmation (0)' })).toBeDisabled();
+  });
+
+  it('allows individually selected devotees for the donation template regardless of category', async () => {
+    render(<SmsCampaigns />);
+    const [, campaignType, recipients] = screen.getAllByRole('combobox');
+    fireEvent.change(campaignType, { target: { value: 'DONATION' } });
+    fireEvent.change(recipients, { target: { value: 'ANY_DEVOTEE' } });
+    expect(screen.queryByText('Donation thank-you recipients')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Send donation thank-you (0)' })).toBeDisabled();
+    fireEvent.change(screen.getByPlaceholderText('Type at least 2 characters...'), {
+      target: { value: 'Attendee' },
+    });
+    await waitFor(() => expect(screen.getByText('Attendee')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('checkbox', { name: /Attendee/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Send donation thank-you (1)' }));
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith('/sms/campaigns', {
+      type: 'DONATION',
+      channel: 'WHATSAPP',
+      recipientMode: 'ANY_DEVOTEE',
+      registrationIds: [3],
+    }));
+  });
+
+  it('allows an individual recipient for an accommodation campaign without broadcasting', async () => {
+    render(<SmsCampaigns />);
+    const [, , recipients] = screen.getAllByRole('combobox');
+    fireEvent.change(recipients, { target: { value: 'ANY_DEVOTEE' } });
+    expect(screen.getByRole('button', { name: 'Send Campaign' })).toBeDisabled();
+    fireEvent.change(screen.getByPlaceholderText('Type at least 2 characters...'), {
+      target: { value: 'Donor' },
+    });
+    await waitFor(() => expect(screen.getByText('Donor')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('checkbox', { name: /Donor/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Send Campaign' }));
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith('/sms/campaigns', {
+      type: 'ACCOMMODATION',
+      channel: 'WHATSAPP',
+      recipientMode: 'ANY_DEVOTEE',
+      registrationIds: [2],
+    }));
   });
 });

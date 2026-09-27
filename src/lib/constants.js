@@ -119,6 +119,8 @@ export const PAYMENT_STATUS = [
 
 export const SMS_CAMPAIGN_TYPE = [
   { value: 'ACCOMMODATION', label: 'Accommodation Assignment' },
+  { value: 'DONATION', label: 'Donation Thank You' },
+  { value: 'NOT_STAYING', label: 'Attending Without Accommodation' },
   { value: 'CUSTOM', label: 'Custom Message' },
 ];
 

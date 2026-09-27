@@ -406,7 +406,7 @@ export default function HelpCenter() {
               </CardHeader>
               <CardContent className="p-6 space-y-4 text-sm text-slate-700">
                 <p>
-                  Send bulk SMS or WhatsApp template messages to devotees based on category, payment status, or arrival status.
+                  Select WhatsApp and choose Donation Thank You for approved donors who are not attending, or Attending Without Accommodation for approved non-staying devotees. Select recipients from the eligible list (or use Select all) before sending. Choose Any Devotee to search and individually select registrations for any campaign template regardless of category or payment status; only selected devotees receive it. Check that the template is appropriate for each selected person (an accommodation message may have no room details). The non-staying confirmation includes active seminar hall details and requires a hall map link; both campaigns require their configured WhatsApp templates. Application posts a custom notice to the Notice Board and cannot target individuals; the SMS channel is not supported in this build.
                 </p>
               </CardContent>
             </Card>

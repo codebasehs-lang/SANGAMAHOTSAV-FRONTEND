@@ -35,20 +35,24 @@ const MESSAGE_CHANNEL_OPTIONS = [
   { value: 'SMS', label: 'SMS' },
 ];
 
+const isTargetedTemplate = (type) =>
+  type === 'DONATION' || type === 'NOT_STAYING';
+
 export default function SmsCampaigns() {
   const { isViewer } = useAuth();
   const [type, setType] = useState('ACCOMMODATION');
   const [channel, setChannel] = useState('WHATSAPP');
   const [message, setMessage] = useState('');
-  const [audience, setAudience] = useState('ALL'); // 'ALL' | 'SELECTED'
+  const [audience, setAudience] = useState('ALL');
   const [selected, setSelected] = useState([]); // [{ id, name, mobileNumber }]
-  const [donationRecipients, setDonationRecipients] = useState([]);
-  const [loadingDonationRecipients, setLoadingDonationRecipients] = useState(false);
-  const [donationRecipientError, setDonationRecipientError] = useState('');
+  const [targetedRecipients, setTargetedRecipients] = useState([]);
+  const [loadingTargetedRecipients, setLoadingTargetedRecipients] = useState(false);
+  const [targetedRecipientError, setTargetedRecipientError] = useState('');
 
   const [search, setSearch] = useState('');
   const [results, setResults] = useState([]);
   const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState('');
 
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState(null);
@@ -57,6 +61,8 @@ export default function SmsCampaigns() {
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
   const isApplicationChannel = channel === 'APPLICATION';
+  const isAnyDevotee = audience === 'ANY_DEVOTEE';
+  const isCategoryAudience = isTargetedTemplate(type) && !isAnyDevotee;
 
   async function loadCampaigns() {
     setLoading(true);
@@ -75,48 +81,54 @@ export default function SmsCampaigns() {
   }, []);
 
   useEffect(() => {
-    if (type !== 'DONATION') return undefined;
+    if (!isCategoryAudience) return undefined;
 
     let active = true;
-    setLoadingDonationRecipients(true);
-    setDonationRecipientError('');
+    setLoadingTargetedRecipients(true);
+    setTargetedRecipientError('');
+    setTargetedRecipients([]);
     api
-      .get('/sms/donation-only-recipients')
+      .get(type === 'DONATION'
+        ? '/sms/donation-only-recipients'
+        : '/sms/not-staying-recipients')
       .then(({ data }) => {
-        if (active) setDonationRecipients(data.data);
+        if (active) setTargetedRecipients(data.data);
       })
       .catch((err) => {
         if (active) {
-          setDonationRecipients([]);
-          setDonationRecipientError(getErrorMessage(err));
+          setTargetedRecipients([]);
+          setTargetedRecipientError(getErrorMessage(err));
         }
       })
       .finally(() => {
-        if (active) setLoadingDonationRecipients(false);
+        if (active) setLoadingTargetedRecipients(false);
       });
 
     return () => {
       active = false;
     };
-  }, [type]);
+  }, [type, isCategoryAudience]);
 
   const runSearch = useCallback(async () => {
-    if (audience !== 'SELECTED' || search.trim().length < 2) {
+    if ((audience !== 'SELECTED' && !isAnyDevotee) || search.trim().length < 2) {
       setResults([]);
+      setSearchError('');
       return;
     }
     setSearching(true);
+    setSearchError('');
     try {
       const { data } = await api.get('/registrations', {
         params: { search: search.trim(), limit: 10 },
       });
       setResults(data.data);
-    } catch {
+    } catch (err) {
       setResults([]);
+      setSearchError(getErrorMessage(err));
     } finally {
       setSearching(false);
     }
-  }, [search, audience]);
+  }, [search, audience, isAnyDevotee]);
 
   useEffect(() => {
     const t = setTimeout(runSearch, 300);
@@ -141,7 +153,8 @@ export default function SmsCampaigns() {
     try {
       const payload = { type, channel };
       if (type === 'CUSTOM' || isApplicationChannel) payload.message = message;
-      if (type === 'DONATION' || (!isApplicationChannel && audience === 'SELECTED'))
+      if (isAnyDevotee) payload.recipientMode = 'ANY_DEVOTEE';
+      if (isTargetedTemplate(type) || (!isApplicationChannel && (audience === 'SELECTED' || isAnyDevotee)))
         payload.registrationIds = selected.map((r) => r.id);
 
       const { data } = await api.post('/sms/campaigns', payload);
@@ -162,9 +175,9 @@ export default function SmsCampaigns() {
     sending ||
     (type === 'CUSTOM' && !message.trim()) ||
     (isApplicationChannel && !message.trim()) ||
-    (type === 'DONATION' &&
-      (loadingDonationRecipients || selected.length === 0)) ||
-    (audience === 'SELECTED' && selected.length === 0);
+    (isCategoryAudience &&
+      (loadingTargetedRecipients || !!targetedRecipientError || selected.length === 0)) ||
+    ((audience === 'SELECTED' || isAnyDevotee) && selected.length === 0);
 
   return (
     <div className="space-y-4">
@@ -176,8 +189,10 @@ export default function SmsCampaigns() {
             <CardTitle>Send Bulk Message</CardTitle>
             <CardDescription>
               Send to all eligible devotees, or search and pick specific
-              recipients. Accommodation messages are sent only to devotees with an
-              assigned room. Application channel posts directly to Notice Board.
+              recipients. Choose Any Devotee to send the selected campaign template
+              to individually selected registrations regardless of category.
+              Accommodation messages normally require an assigned room.
+              Application channel posts directly to Notice Board.
             </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -187,7 +202,7 @@ export default function SmsCampaigns() {
               <Select
                 options={MESSAGE_CHANNEL_OPTIONS}
                 value={channel}
-                disabled={type === 'DONATION'}
+                disabled={isTargetedTemplate(type)}
                 onChange={(e) => {
                   const nextChannel = e.target.value;
                   setChannel(nextChannel);
@@ -209,11 +224,13 @@ export default function SmsCampaigns() {
                   const nextType = e.target.value;
                   setType(nextType);
                   setSelected([]);
-                  if (nextType === 'DONATION') {
+                  if (isTargetedTemplate(nextType)) {
                     setChannel('WHATSAPP');
-                    setAudience('DONATION_ONLY');
-                  } else if (type === 'DONATION') {
-                    setAudience('ALL');
+                    if (!isAnyDevotee) {
+                      setAudience(nextType === 'DONATION' ? 'DONATION_ONLY' : 'NOT_STAYING_ONLY');
+                    }
+                  } else if (isTargetedTemplate(type)) {
+                    if (!isAnyDevotee) setAudience('ALL');
                   }
                 }}
               />
@@ -221,20 +238,29 @@ export default function SmsCampaigns() {
             <div className="space-y-1.5">
               <Label>Recipients</Label>
               <Select
-                options={[
-                  { value: 'ALL', label: 'All eligible devotees' },
-                  { value: 'SELECTED', label: 'Selected recipients' },
-                  { value: 'DONATION_ONLY', label: 'Approved donors not attending' },
-                ]}
+                options={isTargetedTemplate(type)
+                  ? [{
+                      value: type === 'DONATION' ? 'DONATION_ONLY' : 'NOT_STAYING_ONLY',
+                      label: type === 'DONATION'
+                        ? 'Approved donors not attending'
+                        : 'Approved devotees attending without accommodation',
+                    }, { value: 'ANY_DEVOTEE', label: 'Any Devotee (select individually)' }]
+                  : [
+                      { value: 'ALL', label: 'All eligible devotees' },
+                      { value: 'SELECTED', label: 'Selected recipients' },
+                      { value: 'DONATION_ONLY', label: 'Approved donors not attending' },
+                      { value: 'NOT_STAYING_ONLY', label: 'Approved devotees attending without accommodation' },
+                      { value: 'ANY_DEVOTEE', label: 'Any Devotee (select individually)' },
+                    ]}
                 value={audience}
                 onChange={(e) => {
                   const nextAudience = e.target.value;
                   setAudience(nextAudience);
                   setSelected([]);
-                  if (nextAudience === 'DONATION_ONLY') {
-                    setType('DONATION');
+                  if (nextAudience === 'DONATION_ONLY' || nextAudience === 'NOT_STAYING_ONLY') {
+                    setType(nextAudience === 'DONATION_ONLY' ? 'DONATION' : 'NOT_STAYING');
                     setChannel('WHATSAPP');
-                  } else if (audience === 'DONATION_ONLY') {
+                  } else if (isTargetedTemplate(type) && nextAudience !== 'ANY_DEVOTEE') {
                     setType('ACCOMMODATION');
                   }
                 }}
@@ -243,17 +269,21 @@ export default function SmsCampaigns() {
             </div>
           </div>
 
-          {type === 'DONATION' && (
+          {isCategoryAudience && (
             <div className="space-y-3 rounded-md border p-3">
               <div>
-                <p className="font-medium">Donation thank-you recipients</p>
+                <p className="font-medium">
+                  {type === 'DONATION'
+                    ? 'Donation thank-you recipients'
+                    : 'Attending without accommodation recipients'}
+                </p>
                 <p className="text-sm text-muted-foreground">
-                  Approved registrations marked as not attending, with at least one
-                  donation item. Select the people who should receive the Meta
-                  donation template.
+                  {type === 'DONATION'
+                    ? 'Approved registrations marked as not attending, with at least one donation item. Select the people who should receive the Meta donation template.'
+                    : 'Approved devotees attending without accommodation. Select the people who should receive the Meta non-staying confirmation template (requires an active seminar hall with a map link).'}
                 </p>
                 <p className="mt-2 whitespace-pre-line rounded-md bg-muted p-3 text-sm">
-                  {`Hare Krishna! 🙏
+                  {type === 'DONATION' ? `Hare Krishna! 🙏
 
 Dear {{1}},
 
@@ -261,13 +291,28 @@ Thank you for your generous donation towards Sanga Mahotsav 2026. Though you wil
 
 We pray for the blessings of Sri Sri Krishna Balaram upon you and your family.
 
-Sanga Mahotsav Management Committee 🙏`}
+Sanga Mahotsav Management Committee 🙏` : `Hare Krishna!
+
+Please accept our humble obeisances.
+
+Dear {{1}},
+
+Your registration for Sanga Mahotsav 2026 has been confirmed.
+
+Seminar Hall Details
+Hall: {{2}}
+Map: {{3}}
+
+We look forward to your participation in the seminar sessions and pray for a spiritually enriching experience.
+
+Your Servants,
+Sanga Mahotsav Management Committee`}
                 </p>
               </div>
-              {donationRecipientError && (
-                <p className="text-sm text-destructive">{donationRecipientError}</p>
+              {targetedRecipientError && (
+                <p className="text-sm text-destructive">{targetedRecipientError}</p>
               )}
-              {loadingDonationRecipients ? (
+              {loadingTargetedRecipients ? (
                 <div className="flex justify-center py-3">
                   <Spinner className="h-5 w-5 text-primary" />
                 </div>
@@ -275,7 +320,7 @@ Sanga Mahotsav Management Committee 🙏`}
                 <>
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <Label>
-                      Eligible donors: {donationRecipients.length} · Selected:{' '}
+                      Eligible {type === 'DONATION' ? 'donors' : 'non-staying devotees'}: {targetedRecipients.length} · Selected:{' '}
                       {selected.length}
                     </Label>
                     <div className="flex gap-2">
@@ -283,12 +328,12 @@ Sanga Mahotsav Management Committee 🙏`}
                         type="button"
                         variant="outline"
                         size="sm"
-                        disabled={donationRecipients.length === 0}
+                        disabled={targetedRecipients.length === 0}
                         onClick={() =>
                           setSelected(
-                            selected.length === donationRecipients.length
+                            selected.length === targetedRecipients.length
                               ? []
-                              : donationRecipients.map(
+                              : targetedRecipients.map(
                                   ({ id, name, mobileNumber }) => ({
                                     id,
                                     name,
@@ -298,20 +343,22 @@ Sanga Mahotsav Management Committee 🙏`}
                           )
                         }
                       >
-                        {selected.length === donationRecipients.length &&
-                        donationRecipients.length > 0
+                        {selected.length === targetedRecipients.length &&
+                        targetedRecipients.length > 0
                           ? 'Clear selection'
                           : 'Select all'}
                       </Button>
                     </div>
                   </div>
-                  {donationRecipients.length === 0 ? (
+                  {targetedRecipients.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
-                      No approved donation-only recipients found.
+                      {type === 'DONATION'
+                        ? 'No approved donation-only recipients found.'
+                        : 'No approved non-staying devotees found.'}
                     </p>
                   ) : (
                     <div className="max-h-56 overflow-y-auto rounded-md border">
-                      {donationRecipients.map((recipient) => (
+                      {targetedRecipients.map((recipient) => (
                         <label
                           key={recipient.id}
                           className="flex cursor-pointer flex-wrap items-center gap-2 border-b px-3 py-2 text-sm last:border-b-0 hover:bg-accent sm:flex-nowrap"
@@ -330,9 +377,11 @@ Sanga Mahotsav Management Committee 🙏`}
                           <span className="text-muted-foreground">
                             {recipient.mobileNumber}
                           </span>
-                          <span className="text-muted-foreground sm:ml-auto">
-                            Donation: {currency(recipient.donationAmount)}
-                          </span>
+                          {type === 'DONATION' && (
+                            <span className="text-muted-foreground sm:ml-auto">
+                              Donation: {currency(recipient.donationAmount)}
+                            </span>
+                          )}
                         </label>
                       ))}
                     </div>
@@ -362,8 +411,14 @@ Sanga Mahotsav Management Committee 🙏`}
             </div>
           )}
 
-          {!isApplicationChannel && audience === 'SELECTED' && (
+          {!isApplicationChannel && (audience === 'SELECTED' || isAnyDevotee) && (
             <div className="space-y-3">
+              {isAnyDevotee && (
+                <p className="text-sm text-muted-foreground">
+                  Only the devotees you select below will receive this campaign.
+                  Category and payment filters do not apply in Any Devotee mode.
+                </p>
+              )}
               <div className="space-y-1.5">
                 <Label>Search by name or phone number</Label>
                 <div className="relative">
@@ -408,6 +463,10 @@ Sanga Mahotsav Management Committee 🙏`}
                 )
               )}
 
+              {searchError && (
+                <p className="text-sm text-destructive">{searchError}</p>
+              )}
+
               {selected.length > 0 && (
                 <div className="space-y-1.5">
                   <Label>Selected ({selected.length})</Label>
@@ -437,6 +496,8 @@ Sanga Mahotsav Management Committee 🙏`}
                 ? 'Sending...'
                 : type === 'DONATION'
                 ? `Send donation thank-you (${selected.length})`
+                : type === 'NOT_STAYING'
+                ? `Send non-staying confirmation (${selected.length})`
                 : 'Send Campaign'}
             </Button>
           </div>
