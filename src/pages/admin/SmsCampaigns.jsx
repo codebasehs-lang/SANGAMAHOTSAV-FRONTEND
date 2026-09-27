@@ -242,14 +242,14 @@ export default function SmsCampaigns() {
                   ? [{
                       value: type === 'DONATION' ? 'DONATION_ONLY' : 'NOT_STAYING_ONLY',
                       label: type === 'DONATION'
-                        ? 'Approved donors not attending'
-                        : 'Approved devotees attending without accommodation',
+                        ? 'All donors'
+                        : 'All devotees attending without accommodation',
                     }, { value: 'ANY_DEVOTEE', label: 'Any Devotee (select individually)' }]
                   : [
                       { value: 'ALL', label: 'All eligible devotees' },
                       { value: 'SELECTED', label: 'Selected recipients' },
-                      { value: 'DONATION_ONLY', label: 'Approved donors not attending' },
-                      { value: 'NOT_STAYING_ONLY', label: 'Approved devotees attending without accommodation' },
+                      { value: 'DONATION_ONLY', label: 'All donors' },
+                      { value: 'NOT_STAYING_ONLY', label: 'All devotees attending without accommodation' },
                       { value: 'ANY_DEVOTEE', label: 'Any Devotee (select individually)' },
                     ]}
                 value={audience}
@@ -279,15 +279,15 @@ export default function SmsCampaigns() {
                 </p>
                 <p className="text-sm text-muted-foreground">
                   {type === 'DONATION'
-                    ? 'Approved registrations marked as not attending, with at least one donation item. Select the people who should receive the Meta donation template.'
-                    : 'Approved devotees attending without accommodation. Select the people who should receive the Meta non-staying confirmation template (requires an active seminar hall with a map link).'}
+                    ? 'All devotees with at least one donation item, regardless of attendance or payment status (same list as the Donations page). Select the people who should receive the Meta donation template.'
+                    : 'All devotees marked "Attending but not staying" on registration, regardless of payment status. Select the people who should receive the Meta non-staying confirmation template (requires an active seminar hall with a map link).'}
                 </p>
                 <p className="mt-2 whitespace-pre-line rounded-md bg-muted p-3 text-sm">
                   {type === 'DONATION' ? `Hare Krishna! 🙏
 
 Dear {{1}},
 
-Thank you for your generous donation towards Sanga Mahotsav 2026. Though you will not be attending the event, your support is greatly appreciated and helps make this festival possible.
+Thank you for your generous donation towards Sanga Mahotsav 2026. Your support is greatly appreciated and helps make this festival possible.
 
 We pray for the blessings of Sri Sri Krishna Balaram upon you and your family.
 
@@ -353,8 +353,8 @@ Sanga Mahotsav Management Committee`}
                   {targetedRecipients.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
                       {type === 'DONATION'
-                        ? 'No approved donation-only recipients found.'
-                        : 'No approved non-staying devotees found.'}
+                        ? 'No donation records found.'
+                        : 'No non-staying devotees found.'}
                     </p>
                   ) : (
                     <div className="max-h-56 overflow-y-auto rounded-md border">
