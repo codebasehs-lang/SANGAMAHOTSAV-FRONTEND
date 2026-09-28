@@ -732,7 +732,12 @@ export default function RegistrantDashboard() {
                 <CardHeader>
                   <CardTitle>Notice Board</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
+                <CardContent
+                  className="h-[min(32rem,60vh)] space-y-3 overflow-y-auto overscroll-contain pr-3 [scrollbar-gutter:stable]"
+                  role="region"
+                  aria-label="Notice board messages"
+                  tabIndex={0}
+                >
                   {profile?.noticeBoardMessages?.length ? (
                     <div className="space-y-3">
                       {profile.noticeBoardMessages.map((notice) => (
