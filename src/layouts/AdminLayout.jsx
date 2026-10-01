@@ -38,10 +38,14 @@ const NAV = [
   { to: '/admin/help', label: 'Help Center', icon: HelpCircle },
 ];
 
-function SidebarNav({ onLinkClick }) {
+function SidebarNav({ onLinkClick, isViewer }) {
+  const visibleNav = isViewer
+    ? NAV.filter(({ to }) => to === '/admin/registrations' || to === '/admin/attendance')
+    : NAV;
+
   return (
     <nav className="flex-1 space-y-1 p-3">
-      {NAV.map(({ to, label, icon: Icon, end }) => (
+      {visibleNav.map(({ to, label, icon: Icon, end }) => (
         <NavLink
           key={to}
           to={to}
@@ -82,7 +86,7 @@ export default function AdminLayout() {
           <LayoutDashboard className="h-5 w-5 text-indigo-300" />
           <span className="font-serif text-lg font-bold text-white">Sanga Mahotsav</span>
         </div>
-        <SidebarNav />
+        <SidebarNav isViewer={isViewer} />
       </aside>
 
       {/* Mobile drawer overlay */}
@@ -114,7 +118,7 @@ export default function AdminLayout() {
             <X className="h-5 w-5" />
           </button>
         </div>
-        <SidebarNav onLinkClick={() => setDrawerOpen(false)} />
+        <SidebarNav isViewer={isViewer} onLinkClick={() => setDrawerOpen(false)} />
       </aside>
 
       {/* Main */}
