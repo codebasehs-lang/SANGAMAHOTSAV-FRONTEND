@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Camera, Check, KeyRound, LogOut, RefreshCw, Search, UserCheck, UserX } from 'lucide-react';
+import { Camera, Check, KeyRound, LogOut, RefreshCw, RotateCcw, Search, UserCheck, UserX } from 'lucide-react';
 import api, { getErrorMessage } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -122,6 +122,13 @@ export default function Attendance() {
 
   async function performAction(action) {
     if (!selected) return;
+    if (
+      action === 'RESET' &&
+      !window.confirm(`Reset attendance and hotel key status for ${selected.name} and all family members?`)
+    ) {
+      return;
+    }
+
     setActionLoading(action);
     setError('');
     setMessage('');
@@ -135,9 +142,15 @@ export default function Attendance() {
       setSelectedMembers(
         action === 'CHECK_OUT'
           ? []
+          : action === 'RESET'
+            ? (data.data.familyMembers || []).map((_, index) => index)
           : (data.data.familyMembers || []).map((member, index) => (member.checkedIn ? null : index)).filter((index) => index !== null)
       );
-      setMessage(action === 'CHECK_IN' ? 'Arrival recorded.' : action === 'CHECK_OUT' ? 'Checkout recorded.' : 'Hotel key status updated.');
+      if (action === 'RESET') {
+        setMessage('Attendance and hotel key status reset.');
+      } else {
+        setMessage(action === 'CHECK_IN' ? 'Arrival recorded.' : action === 'CHECK_OUT' ? 'Checkout recorded.' : 'Hotel key status updated.');
+      }
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
@@ -223,6 +236,11 @@ export default function Attendance() {
               <Button variant="outline" onClick={() => performAction('GIVE_KEY')} disabled={Boolean(actionLoading) || selected.hotelKeyGiven}><KeyRound className="h-4 w-4" /> {selected.hotelKeyGiven ? 'Key given' : 'Give hotel key'}</Button>
               <Button variant="outline" onClick={() => performAction('RETURN_KEY')} disabled={Boolean(actionLoading) || !selected.hotelKeyGiven || selected.hotelKeyReturned}><RefreshCw className="h-4 w-4" /> {selected.hotelKeyReturned ? 'Key returned' : 'Return hotel key'}</Button>
               <Button variant="secondary" onClick={() => performAction('CHECK_OUT')} disabled={Boolean(actionLoading) || !['CHECKED_IN', 'PARTIALLY_ARRIVED'].includes(selected.attendanceStatus)}><LogOut className="h-4 w-4" /> {actionLoading === 'CHECK_OUT' ? 'Saving...' : 'Check out'}</Button>
+            </div>
+            <div className="flex justify-end">
+              <Button variant="destructive" onClick={() => performAction('RESET')} disabled={Boolean(actionLoading)}>
+                <RotateCcw className="h-4 w-4" /> {actionLoading === 'RESET' ? 'Resetting...' : 'Reset attendance'}
+              </Button>
             </div>
             <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
               <span>{selected.hotelKeyGiven ? <Check className="mr-1 inline h-3.5 w-3.5 text-emerald-600" /> : <UserX className="mr-1 inline h-3.5 w-3.5" />}Hotel key {selected.hotelKeyGiven ? 'given' : 'not given'}</span>
